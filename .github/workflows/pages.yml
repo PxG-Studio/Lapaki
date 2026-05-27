@@ -1,0 +1,58 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # allow manual trigger from GitHub UI
+
+# Allow only one concurrent Pages deployment
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build Pages artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare public directory
+        run: |
+          mkdir -p public
+          # Copy the landing page to the root
+          cp index.html public/index.html
+          # Copy all visualizations
+          cp -r visualizations public/visualizations
+          # Copy all documentation (optional — for browseable repo mirror)
+          cp -r docs public/docs 2>/dev/null || true
+          # Copy README as a fallback
+          cp README.md public/README.md 2>/dev/null || true
+          echo "=== public/ layout ===" && ls -la public/
+          echo "=== visualizations/ ===" && ls -la public/visualizations/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
