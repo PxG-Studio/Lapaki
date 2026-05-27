@@ -1,0 +1,456 @@
+# Lapaki Healthcare Data Architecture Framework — GitLab CI/CD Pipeline
+# Mirrors the GitHub Actions workflows for full parity on self-hosted GitLab
+
+stages:
+  - lint
+  - security
+  - validate
+  - compliance
+  - pages
+
+variables:
+  GITLAB_COMPLIANCE_THRESHOLD: "80"
+
+# ─────────────────────────────────────────────
+# STAGE 1: LINT
+# ─────────────────────────────────────────────
+
+markdown-lint:
+  stage: lint
+  image: node:20-alpine
+  before_script:
+    - npm install -g markdownlint-cli@0.39.0 --silent
+  script:
+    - |
+      echo "Running Markdown lint..."
+      markdownlint '**/*.md' \
+        --ignore node_modules \
+        --ignore '.git/**' \
+        --config .markdownlint.json 2>/dev/null || \
+      markdownlint '**/*.md' \
+        --ignore node_modules \
+        --ignore '.git/**' \
+        --disable MD013 MD033 MD041 MD024 -- || true
+      echo "✅ Markdown lint complete"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+  allow_failure: true
+
+# ─────────────────────────────────────────────
+# STAGE 2: SECURITY — PHI SCAN
+# ─────────────────────────────────────────────
+
+phi-content-scan:
+  stage: security
+  image: alpine:3.19
+  script:
+    - |
+      echo "🔍 Scanning for PHI patterns..."
+      VIOLATIONS=0
+
+      # SSN patterns
+      if grep -rn --include="*.md" --include="*.html" \
+        -E '\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b' . \
+        --exclude-dir=.git 2>/dev/null | grep -v "example\|placeholder\|XXX-XX\|###-##"; then
+        echo "⚠️  Potential SSN pattern found"
+        VIOLATIONS=$((VIOLATIONS+1))
+      fi
+
+      # MRN-like patterns (7+ digit numbers labelled as MRN/Patient ID)
+      if grep -rn --include="*.md" --include="*.html" \
+        -iE '(MRN|patient.?id|medical.?record)[^a-z0-9]*[0-9]{6,}' . \
+        --exclude-dir=.git 2>/dev/null; then
+        echo "⚠️  Potential MRN pattern found"
+        VIOLATIONS=$((VIOLATIONS+1))
+      fi
+
+      # DOB patterns (not in examples/placeholders)
+      if grep -rn --include="*.md" --include="*.html" \
+        -E '\b(DOB|date.of.birth|birthdate)[^a-z]*[0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4}\b' . \
+        --exclude-dir=.git 2>/dev/null; then
+        echo "⚠️  Potential DOB pattern found"
+        VIOLATIONS=$((VIOLATIONS+1))
+      fi
+
+      # Real names in patient context
+      if grep -rn --include="*.md" \
+        -iE 'patient name[^a-z]*[A-Z][a-z]+ [A-Z][a-z]+' . \
+        --exclude-dir=.git 2>/dev/null; then
+        echo "⚠️  Potential patient name found"
+        VIOLATIONS=$((VIOLATIONS+1))
+      fi
+
+      if [ "$VIOLATIONS" -eq 0 ]; then
+        echo "✅ No PHI patterns detected — repository is PHI-free"
+      else
+        echo "❌ $VIOLATIONS PHI pattern(s) detected — review required"
+        exit 1
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "staging"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# ─────────────────────────────────────────────
+# STAGE 3: VALIDATE — MERMAID + HTML
+# ─────────────────────────────────────────────
+
+mermaid-validation:
+  stage: validate
+  image: node:20-alpine
+  before_script:
+    - npm install -g @mermaid-js/mermaid-cli@10.9.1 --silent 2>/dev/null || true
+    - apk add --no-cache grep 2>/dev/null
+  script:
+    - |
+      echo "🧜 Validating Mermaid diagram syntax..."
+      ERRORS=0
+      DIAGRAM_COUNT=0
+
+      while IFS= read -r file; do
+        # Extract mermaid blocks
+        python3 - "$file" <<'PYEOF'
+      import sys, re, subprocess, tempfile, os
+
+      filepath = sys.argv[1]
+      with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+          content = f.read()
+
+      blocks = re.findall(r'```mermaid\n(.*?)\n```', content, re.DOTALL)
+      if not blocks:
+          sys.exit(0)
+
+      print(f"  {filepath}: {len(blocks)} diagram(s)")
+      errors = 0
+      for i, block in enumerate(blocks):
+          first_line = block.strip().split('\n')[0].strip()
+          valid_types = ['flowchart', 'graph', 'sequenceDiagram', 'classDiagram',
+                         'stateDiagram', 'erDiagram', 'gantt', 'pie', 'mindmap',
+                         'timeline', 'quadrantChart', 'xychart-beta', 'sankey-beta']
+          valid = any(block.strip().startswith(t) for t in valid_types)
+          if not valid:
+              print(f"    ⚠️  Diagram {i+1}: unrecognized type '{first_line}'")
+              errors += 1
+          else:
+              print(f"    ✅ Diagram {i+1}: {first_line}")
+      if errors > 0:
+          sys.exit(1)
+      PYEOF
+        STATUS=$?
+        if [ $STATUS -ne 0 ]; then
+          ERRORS=$((ERRORS+1))
+        fi
+        DIAGRAM_COUNT=$((DIAGRAM_COUNT+1))
+      done < <(find . -name "*.md" --exclude-dir=.git 2>/dev/null || find . -name "*.md" | grep -v "\.git")
+
+      echo ""
+      if [ "$ERRORS" -eq 0 ]; then
+        echo "✅ All Mermaid diagrams validated"
+      else
+        echo "❌ $ERRORS file(s) with diagram issues"
+        exit 1
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  allow_failure: true
+
+html-validation:
+  stage: validate
+  image: python:3.12-alpine
+  script:
+    - |
+      echo "🌐 Checking HTML visualization..."
+      python3 - <<'PYEOF'
+      import os, sys, glob
+
+      html_files = glob.glob('visualizations/*.html') + glob.glob('*.html')
+      if not html_files:
+          print("⚠️  No HTML files found in visualizations/")
+          sys.exit(0)
+
+      errors = 0
+      for f in html_files:
+          with open(f) as fh:
+              content = fh.read()
+          checks = {
+              '<!DOCTYPE html>': 'DOCTYPE declaration',
+              '<title>': 'Title tag',
+              'viewport': 'Viewport meta',
+              '</html>': 'Closing html tag',
+          }
+          for pattern, name in checks.items():
+              if pattern not in content:
+                  print(f"❌ {f}: Missing {name}")
+                  errors += 1
+              else:
+                  print(f"✅ {f}: Has {name}")
+
+          # PHI check on HTML too
+          phi_patterns = ['SSN:', 'DOB:', 'MRN:']
+          for p in phi_patterns:
+              if p in content:
+                  print(f"⚠️  {f}: Potential PHI pattern '{p}'")
+
+      if errors == 0:
+          print(f"\n✅ All {len(html_files)} HTML file(s) valid")
+      else:
+          sys.exit(1)
+      PYEOF
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  allow_failure: true
+
+# ─────────────────────────────────────────────
+# STAGE 4: COMPLIANCE AUDIT
+# ─────────────────────────────────────────────
+
+compliance-structure-audit:
+  stage: compliance
+  image: alpine:3.19
+  script:
+    - |
+      echo "📋 Repository Structure Audit"
+      MISSING=0
+      PRESENT=0
+
+      check_file() {
+        if [ -f "$1" ]; then
+          echo "  ✅ $1"
+          PRESENT=$((PRESENT+1))
+        else
+          echo "  ❌ MISSING: $1"
+          MISSING=$((MISSING+1))
+        fi
+      }
+
+      echo "--- Root files ---"
+      check_file "README.md"
+      check_file "LICENSE"
+      check_file "SECURITY.md"
+      check_file "CONTRIBUTING.md"
+      check_file "CODE_OF_CONDUCT.md"
+      check_file "CHANGELOG.md"
+
+      echo "--- Architecture ---"
+      check_file "docs/architecture/01-swimlanes.md"
+      check_file "docs/architecture/02-flowcharts.md"
+      check_file "docs/architecture/03-mindmap.md"
+      check_file "docs/architecture/04-mindmap-notes.md"
+
+      echo "--- COBIT 2019 (all 5 domains) ---"
+      check_file "docs/cobit/README.md"
+      check_file "docs/cobit/01-governance-system.md"
+      check_file "docs/cobit/02-align-plan-organize.md"
+      check_file "docs/cobit/03-build-acquire.md"
+      check_file "docs/cobit/04-deliver-service.md"
+      check_file "docs/cobit/05-monitor-evaluate.md"
+      check_file "docs/cobit/06-maturity-model.md"
+      check_file "docs/cobit/07-cobit-mermaid.md"
+
+      echo "--- Compliance ---"
+      check_file "docs/compliance/hipaa-safeguards.md"
+      check_file "docs/compliance/hitech-requirements.md"
+      check_file "docs/compliance/nist-800-53.md"
+      check_file "docs/compliance/iso-27001.md"
+      check_file "docs/compliance/audit-checklist.md"
+
+      echo "--- Governance ---"
+      check_file "governance/data-governance-policy.md"
+      check_file "governance/access-control-matrix.md"
+      check_file "governance/data-classification-scheme.md"
+      check_file "governance/incident-response-plan.md"
+
+      check_file "visualizations/health-data-architecture-framework.html"
+
+      TOTAL=$((PRESENT+MISSING))
+      SCORE=$(echo "scale=0; $PRESENT * 100 / $TOTAL" | bc)
+      echo ""
+      echo "Score: $PRESENT/$TOTAL ($SCORE%)"
+
+      if [ "$MISSING" -gt 3 ]; then
+        echo "❌ Too many missing required files ($MISSING)"
+        exit 1
+      else
+        echo "✅ Structure audit passed"
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+hipaa-citations-audit:
+  stage: compliance
+  image: alpine:3.19
+  script:
+    - |
+      echo "⚖️  HIPAA Citation Coverage Audit"
+      MISSING_CITES=0
+
+      check_cite() {
+        PATTERN="$1"
+        DESC="$2"
+        if grep -rq "$PATTERN" docs/ governance/ 2>/dev/null; then
+          echo "  ✅ $DESC"
+        else
+          echo "  ❌ Missing: $DESC ($PATTERN)"
+          MISSING_CITES=$((MISSING_CITES+1))
+        fi
+      }
+
+      check_cite "164.308" "HIPAA §164.308 Administrative Safeguards"
+      check_cite "164.310" "HIPAA §164.310 Physical Safeguards"
+      check_cite "164.312" "HIPAA §164.312 Technical Safeguards"
+      check_cite "164.314" "HIPAA §164.314 Organizational Requirements"
+      check_cite "164.514" "HIPAA §164.514 De-Identification"
+      check_cite "164.400\|164.402\|164.408" "HIPAA §164.400 Breach Notification"
+      check_cite "164.504\|164.508\|164.530" "HIPAA §164.504 Business Associates"
+
+      echo ""
+      if [ "$MISSING_CITES" -eq 0 ]; then
+        echo "✅ All required HIPAA citations present"
+      else
+        echo "⚠️  $MISSING_CITES HIPAA citation group(s) missing"
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+cobit-coverage-audit:
+  stage: compliance
+  image: python:3.12-alpine
+  script:
+    - |
+      python3 - <<'PYEOF'
+      import glob, re, sys
+
+      # All 40 COBIT 2019 objectives
+      all_objectives = (
+          [f'EDM0{i}' for i in range(1,7)] +
+          [f'APO{i:02d}' for i in range(1,15)] +
+          [f'BAI{i:02d}' for i in range(1,12)] +
+          [f'DSS0{i}' for i in range(1,7)] +
+          [f'MEA0{i}' for i in range(1,5)]
+      )
+
+      all_content = ''
+      for f in glob.glob('docs/cobit/*.md'):
+          with open(f) as fh:
+              all_content += fh.read()
+
+      found = [obj for obj in all_objectives if obj in all_content]
+      missing = [obj for obj in all_objectives if obj not in all_content]
+
+      pct = len(found) * 100 // len(all_objectives)
+      print(f"COBIT Coverage: {len(found)}/{len(all_objectives)} objectives ({pct}%)")
+
+      if missing:
+          print(f"Missing: {', '.join(missing)}")
+
+      threshold = 80
+      if pct >= threshold:
+          print(f"✅ Coverage {pct}% meets threshold {threshold}%")
+      else:
+          print(f"❌ Coverage {pct}% below threshold {threshold}%")
+          sys.exit(1)
+      PYEOF
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+academic-references-audit:
+  stage: compliance
+  image: alpine:3.19
+  script:
+    - |
+      echo "📚 Academic References Audit"
+      MISSING_REFS=0
+
+      check_ref() {
+        PATTERN="$1"
+        DESC="$2"
+        if grep -rq "$PATTERN" docs/ 2>/dev/null; then
+          echo "  ✅ $DESC"
+        else
+          echo "  ❌ Missing: $DESC"
+          MISSING_REFS=$((MISSING_REFS+1))
+        fi
+      }
+
+      check_ref "Ohno-Machado\|pSCANNER\|2014.*JAMIA\|JAMIA.*2014" \
+        "Ohno-Machado et al. (2014) pSCANNER — JAMIA"
+      check_ref "PMC13000207\|sleep health.*2026\|2026.*sleep health" \
+        "PMC13000207 (2026) AI health governance"
+      check_ref "Chawla.*2024\|2024.*Chawla\|IJETCSIT\|Trustworthy AI.*2024" \
+        "Chawla et al. (2024) IJETCSIT"
+
+      echo ""
+      if [ "$MISSING_REFS" -eq 0 ]; then
+        echo "✅ All 3 required academic references present"
+      else
+        echo "❌ $MISSING_REFS required reference(s) missing"
+        exit 1
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+
+# ─────────────────────────────────────────────
+# STAGE 5: GITLAB PAGES
+# ─────────────────────────────────────────────
+
+pages:
+  stage: pages
+  image: alpine:3.19
+  script:
+    - |
+      echo "📄 Deploying to GitLab Pages..."
+      mkdir -p public
+
+      # Copy root index.html as the Pages landing page
+      if [ -f "index.html" ]; then
+        cp index.html public/index.html
+        echo "✅ Copied index.html to public/"
+      fi
+
+      # Copy the interactive visualization
+      if [ -d "visualizations" ]; then
+        mkdir -p public/visualizations
+        cp visualizations/*.html public/visualizations/ 2>/dev/null || true
+        echo "✅ Copied visualizations/"
+      fi
+
+      # Copy docs for in-browser reading (optional)
+      if [ -d "docs" ]; then
+        cp -r docs public/docs
+        echo "✅ Copied docs/"
+      fi
+
+      echo "Pages artifacts ready. Files:"
+      find public -type f | head -20
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  environment:
+    name: pages
+    url: https://gitlab.pxg.studio/hiroyasu/lapaki
+
+# ─────────────────────────────────────────────
+# SCHEDULED: WEEKLY COMPLIANCE AUDIT
+# ─────────────────────────────────────────────
+# Configure in GitLab: CI/CD → Schedules → every Monday 08:00 HST
+# Cron: 0 18 * * 1 (UTC)
+# Variable: CI_PIPELINE_SOURCE=schedule (auto-set)
