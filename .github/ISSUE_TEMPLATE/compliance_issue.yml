@@ -1,0 +1,59 @@
+---
+name: Compliance Issue
+description: Report a compliance gap, missing standard citation, or incorrect regulatory reference
+title: "[COMPLIANCE] "
+labels: ["compliance", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **Compliance issues are treated as high priority.** Please be as specific as possible.
+
+  - type: dropdown
+    id: standard
+    attributes:
+      label: Affected Standard
+      options:
+        - HIPAA Privacy Rule (45 CFR §164.500–534)
+        - HIPAA Security Rule (45 CFR §164.302–318)
+        - HIPAA Breach Notification (45 CFR §164.400–414)
+        - HITECH Act
+        - NIST SP 800-53 Rev. 5
+        - NIST SP 800-188 (De-identification)
+        - ISO/IEC 27001:2022
+        - COBIT 2019
+        - OMOP CDM
+        - PCORNet CDM
+        - HL7 FHIR
+        - FAIR Principles
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: section
+    attributes:
+      label: Specific Section / Objective
+      placeholder: "e.g., 45 CFR §164.514(b) or COBIT APO13"
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: Compliance Gap Description
+      description: Describe what is missing, incorrect, or misleading in the framework documentation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommended Correction
+      description: Provide the correct standard language or citation if you have it.
+
+  - type: checkboxes
+    id: phi-check
+    attributes:
+      label: PHI Safety Check
+      options:
+        - label: I confirm this issue report contains no PHI, patient data, or identifiable information
+          required: true

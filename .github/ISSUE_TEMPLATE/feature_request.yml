@@ -1,0 +1,42 @@
+---
+name: Feature Request
+description: Suggest a new diagram, compliance mapping, governance template, or framework extension
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - New Mermaid Diagram
+        - New Compliance Standard Coverage (e.g., GDPR, CCPA)
+        - New COBIT Objective Detail
+        - New Governance Template
+        - Interactive Visualization Enhancement
+        - New Framework Node / Architecture Pattern
+        - New Branch / Release Process
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the feature and why it adds value to the framework.
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Supporting References
+      description: Link to published standards, academic papers, or authoritative guidance supporting this request.
+
+  - type: checkboxes
+    id: phi-check
+    attributes:
+      label: PHI Safety Check
+      options:
+        - label: This feature request does not involve PHI, institution-specific data, or proprietary configurations
+          required: true

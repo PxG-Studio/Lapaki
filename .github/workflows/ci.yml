@@ -1,0 +1,158 @@
+name: CI — Lint & Diagram Validation
+
+on:
+  push:
+    branches: [main, develop, staging, prototype]
+  pull_request:
+    branches: [main, develop, staging]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Markdown Linting ────────────────────────────────────────────────────────
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdownlint
+        run: markdownlint '**/*.md' --ignore node_modules --ignore '.github'
+
+  # ── No-PHI Check ────────────────────────────────────────────────────────────
+  phi-scan:
+    name: PHI Content Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for potential PHI patterns
+        run: |
+          echo "Scanning for potential PHI patterns..."
+          # Check for SSN patterns
+          if grep -rE '\b\d{3}-\d{2}-\d{4}\b' --include="*.md" --include="*.html" .; then
+            echo "::error::Potential SSN pattern detected"
+            exit 1
+          fi
+          # Check for common PHI keywords that should not appear
+          if grep -rE '\b(patient name|date of birth|medical record number|MRN)\s*[:=]\s*\S' --include="*.md" --include="*.html" -i .; then
+            echo "::error::Potential PHI value detected"
+            exit 1
+          fi
+          echo "PHI scan passed — no patterns detected"
+
+  # ── Mermaid Diagram Validation ──────────────────────────────────────────────
+  mermaid-validate:
+    name: Mermaid Diagram Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Extract and validate Mermaid diagrams
+        run: |
+          echo "Extracting Mermaid code blocks from markdown..."
+          find docs -name "*.md" | while read file; do
+            echo "Checking: $file"
+            # Extract mermaid blocks
+            python3 -c "
+          import sys, re
+          content = open('$file').read()
+          blocks = re.findall(r'\`\`\`mermaid\n(.*?)\`\`\`', content, re.DOTALL)
+          for i, block in enumerate(blocks):
+              fname = '/tmp/diagram_${i}.mmd'
+              open(fname, 'w').write(block)
+              print(f'Extracted block {i} from $file -> {fname}')
+            "
+          done
+          # Validate each extracted diagram
+          for f in /tmp/diagram_*.mmd; do
+            if [ -f "$f" ]; then
+              echo "Validating $f..."
+              mmdc -i "$f" -o "/tmp/$(basename $f .mmd).svg" --quiet || { echo "::error::Invalid Mermaid in $f"; cat "$f"; exit 1; }
+            fi
+          done
+          echo "All Mermaid diagrams validated successfully"
+
+  # ── HTML Visualization Syntax Check ─────────────────────────────────────────
+  html-validate:
+    name: HTML Visualization Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install html-validate
+        run: npm install -g html-validate
+
+      - name: Check HTML files exist
+        run: |
+          if [ ! -f "visualizations/health-data-architecture-framework.html" ]; then
+            echo "::error::Interactive visualization file missing"
+            exit 1
+          fi
+          echo "HTML visualization present"
+
+      - name: Check for JS syntax errors
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('visualizations/health-data-architecture-framework.html', 'utf8');
+            const scripts = html.match(/<script>([\s\S]*?)<\/script>/g) || [];
+            scripts.forEach((block, i) => {
+              const js = block.replace(/<\/?script>/g, '');
+              try { new Function(js); console.log('Script block ' + i + ' OK'); }
+              catch(e) { console.error('JS error in block ' + i + ':', e.message); process.exit(1); }
+            });
+            console.log('All script blocks passed syntax check');
+          "
+
+  # ── Dead Link Check ─────────────────────────────────────────────────────────
+  link-check:
+    name: Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/mlc_config.json'
+        continue-on-error: true
+
+  # ── DCO Check ───────────────────────────────────────────────────────────────
+  dco:
+    name: DCO Sign-off Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check DCO
+        uses: dco-action/dco-action@v2
+        with:
+          require-dco: true

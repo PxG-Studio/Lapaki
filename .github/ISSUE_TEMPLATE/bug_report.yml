@@ -1,0 +1,59 @@
+---
+name: Bug Report
+description: Report a factual error, broken diagram, or incorrect citation
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue. Please complete all fields below.
+
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected Area
+      options:
+        - Architecture Diagrams (Swimlanes/Flowcharts/Mindmaps)
+        - COBIT Framework Documentation
+        - Compliance Documentation (HIPAA/NIST/ISO)
+        - Interactive Visualization (HTML)
+        - Academic References / Bibliography
+        - Governance Templates
+        - GitHub Actions Workflows
+        - README / General Documentation
+    validations:
+      required: true
+
+  - type: input
+    id: affected-file
+    attributes:
+      label: Affected File
+      placeholder: "e.g., docs/cobit/01-governance-system.md"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the error clearly. For citation errors, provide the correct citation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Correct Content
+      description: What should it say or show?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: phi-check
+    attributes:
+      label: PHI Safety Check
+      options:
+        - label: I confirm this bug report does not contain any PHI, patient data, or identifiable information
+          required: true

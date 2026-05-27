@@ -1,0 +1,231 @@
+name: Compliance Audit
+
+on:
+  push:
+    branches: [main, staging, baseline]
+  schedule:
+    # Run weekly on Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      audit_scope:
+        description: 'Audit scope'
+        required: true
+        default: 'full'
+        type: choice
+        options: [full, hipaa-only, cobit-only, structure-only]
+
+jobs:
+  # ── Repository Structure Compliance ─────────────────────────────────────────
+  structure-audit:
+    name: Repository Structure Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required files present
+        run: |
+          echo "=== Lapaki Compliance Structure Audit ==="
+          MISSING=0
+
+          required_files=(
+            "README.md"
+            "LICENSE"
+            "SECURITY.md"
+            "CONTRIBUTING.md"
+            "CODE_OF_CONDUCT.md"
+            "CHANGELOG.md"
+            ".github/workflows/ci.yml"
+            ".github/workflows/compliance-audit.yml"
+            ".github/PULL_REQUEST_TEMPLATE.md"
+            ".github/ISSUE_TEMPLATE/bug_report.yml"
+            ".github/ISSUE_TEMPLATE/feature_request.yml"
+            ".github/ISSUE_TEMPLATE/compliance_issue.yml"
+            "docs/architecture/01-swimlanes.md"
+            "docs/architecture/02-flowcharts.md"
+            "docs/architecture/03-mindmap.md"
+            "docs/architecture/04-mindmap-notes.md"
+            "docs/cobit/README.md"
+            "docs/cobit/01-governance-system.md"
+            "docs/cobit/02-align-plan-organize.md"
+            "docs/cobit/03-build-acquire.md"
+            "docs/cobit/04-deliver-service.md"
+            "docs/cobit/05-monitor-evaluate.md"
+            "docs/cobit/06-maturity-model.md"
+            "docs/cobit/07-cobit-mermaid.md"
+            "docs/compliance/README.md"
+            "docs/compliance/hipaa-safeguards.md"
+            "docs/compliance/hitech-requirements.md"
+            "docs/compliance/nist-800-53.md"
+            "docs/compliance/iso-27001.md"
+            "docs/compliance/audit-checklist.md"
+            "docs/references/bibliography.md"
+            "visualizations/health-data-architecture-framework.html"
+            "governance/data-governance-policy.md"
+            "governance/access-control-matrix.md"
+            "governance/data-classification-scheme.md"
+            "governance/incident-response-plan.md"
+          )
+
+          for f in "${required_files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::MISSING: $f"
+              MISSING=$((MISSING + 1))
+            else
+              echo "✅ Present: $f"
+            fi
+          done
+
+          if [ $MISSING -gt 0 ]; then
+            echo "::error::$MISSING required files are missing. Compliance audit FAILED."
+            exit 1
+          fi
+          echo ""
+          echo "✅ ALL REQUIRED FILES PRESENT — Structure audit PASSED"
+
+  # ── HIPAA Citation Completeness ──────────────────────────────────────────────
+  hipaa-citations:
+    name: HIPAA Citation Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify HIPAA section citations present
+        run: |
+          echo "=== HIPAA Citation Completeness Audit ==="
+          MISSING=0
+
+          required_citations=(
+            "164.514(b)"    # Safe Harbor de-identification
+            "164.514(e)"    # Limited Dataset definition
+            "164.308"       # Administrative safeguards
+            "164.312"       # Technical safeguards
+            "164.310"       # Physical safeguards
+            "164.400"       # Breach notification
+            "164.530"       # Administrative requirements
+          )
+
+          for citation in "${required_citations[@]}"; do
+            if ! grep -r "$citation" docs/ --include="*.md" -q; then
+              echo "::warning::Citation missing: 45 CFR §$citation"
+              MISSING=$((MISSING + 1))
+            else
+              echo "✅ Citation present: §$citation"
+            fi
+          done
+
+          echo ""
+          if [ $MISSING -gt 0 ]; then
+            echo "::warning::$MISSING HIPAA citations not found. Consider adding them."
+          else
+            echo "✅ All required HIPAA citations present"
+          fi
+
+  # ── COBIT Completeness ───────────────────────────────────────────────────────
+  cobit-completeness:
+    name: COBIT Objectives Coverage Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify COBIT objective coverage
+        run: |
+          echo "=== COBIT 2019 Objectives Coverage Audit ==="
+
+          objectives=(
+            "EDM01" "EDM02" "EDM03" "EDM04" "EDM05" "EDM06"
+            "APO01" "APO02" "APO03" "APO04" "APO05" "APO06" "APO07"
+            "APO08" "APO09" "APO10" "APO11" "APO12" "APO13" "APO14"
+            "BAI01" "BAI02" "BAI03" "BAI04" "BAI05" "BAI06" "BAI07"
+            "BAI08" "BAI09" "BAI10" "BAI11"
+            "DSS01" "DSS02" "DSS03" "DSS04" "DSS05" "DSS06"
+            "MEA01" "MEA02" "MEA03" "MEA04"
+          )
+
+          TOTAL=${#objectives[@]}
+          FOUND=0
+
+          for obj in "${objectives[@]}"; do
+            if grep -r "$obj" docs/cobit/ --include="*.md" -q; then
+              FOUND=$((FOUND + 1))
+            else
+              echo "::warning::COBIT objective not found: $obj"
+            fi
+          done
+
+          echo ""
+          echo "COBIT Coverage: $FOUND/$TOTAL objectives documented"
+          COVERAGE=$((FOUND * 100 / TOTAL))
+          echo "Coverage percentage: $COVERAGE%"
+
+          if [ $COVERAGE -lt 80 ]; then
+            echo "::error::COBIT coverage below 80% threshold ($COVERAGE%)"
+            exit 1
+          fi
+          echo "✅ COBIT coverage audit PASSED ($COVERAGE%)"
+
+  # ── Reference Completeness ───────────────────────────────────────────────────
+  references-audit:
+    name: Academic References Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required references present
+        run: |
+          echo "=== Academic References Audit ==="
+
+          # Check for the 3 required citations
+          if ! grep -r "pSCANNER" docs/references/ -q; then
+            echo "::error::Missing citation: Ohno-Machado et al. (2014) pSCANNER"
+            exit 1
+          fi
+          echo "✅ Ohno-Machado et al. (2014) pSCANNER present"
+
+          if ! grep -r "PMC13000207" docs/references/ -q; then
+            echo "::error::Missing citation: PMC13000207 (2026) AI health governance"
+            exit 1
+          fi
+          echo "✅ PMC13000207 (2026) AI pipeline governance present"
+
+          if ! grep -r "Chawla" docs/references/ -q; then
+            echo "::error::Missing citation: Chawla et al. (2024) IJETCSIT"
+            exit 1
+          fi
+          echo "✅ Chawla et al. (2024) IJETCSIT present"
+
+          echo ""
+          echo "✅ All required academic references present"
+
+  # ── Audit Summary Report ─────────────────────────────────────────────────────
+  audit-summary:
+    name: Compliance Audit Summary
+    runs-on: ubuntu-latest
+    needs: [structure-audit, hipaa-citations, cobit-completeness, references-audit]
+    if: always()
+    steps:
+      - name: Generate audit report
+        run: |
+          echo "================================================="
+          echo "  LAPAKI COMPLIANCE AUDIT SUMMARY"
+          echo "  Run: ${{ github.run_number }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "================================================="
+          echo ""
+          echo "Structure Audit:    ${{ needs.structure-audit.result }}"
+          echo "HIPAA Citations:    ${{ needs.hipaa-citations.result }}"
+          echo "COBIT Coverage:     ${{ needs.cobit-completeness.result }}"
+          echo "References Audit:   ${{ needs.references-audit.result }}"
+          echo ""
+          if [[ "${{ needs.structure-audit.result }}" == "success" && \
+                "${{ needs.cobit-completeness.result }}" == "success" && \
+                "${{ needs.references-audit.result }}" == "success" ]]; then
+            echo "✅ OVERALL COMPLIANCE STATUS: PASS"
+          else
+            echo "❌ OVERALL COMPLIANCE STATUS: REVIEW REQUIRED"
+          fi

@@ -1,0 +1,36 @@
+# gitignore for Lapaki
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Editor artifacts
+.vscode/
+.idea/
+*.code-workspace
+
+# Node (for CI tools installed locally)
+node_modules/
+npm-debug.log*
+
+# Temporary / scratch files
+tmp/
+*.tmp
+*.log
+
+# Mermaid render outputs (generated, not source)
+*.svg
+*.png
+!docs/**/*.png
+!visualizations/**/*.png
+
+# Never commit credentials or secrets
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
