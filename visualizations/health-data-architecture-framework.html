@@ -4,1014 +4,989 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Health Data Architecture Framework</title>
-  <meta name="description" content="A generalizable framework for clinical and research data architecture in healthcare systems — from EHR source systems through internal research environments to external collaborative networks. Based on industry standards including OMOP, PCORNet, and i2b2." />
+  <meta name="description" content="A generalizable framework for clinical and research data architecture in healthcare — OMOP, PCORNet, HL7 FHIR, HIPAA Safe Harbor." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #070b13;
-      --bg2:        #0c1120;
-      --surface:    rgba(255,255,255,0.04);
-      --surface2:   rgba(255,255,255,0.07);
-      --border:     rgba(255,255,255,0.08);
-      --border2:    rgba(255,255,255,0.15);
-      --text:       #e2e8f5;
-      --text-muted: #64748b;
-      --text-dim:   #2d3a4f;
+      --bg:        #060a10;
+      --surface:   rgba(255,255,255,0.035);
+      --surface2:  rgba(255,255,255,0.065);
+      --border:    rgba(255,255,255,0.075);
+      --border2:   rgba(255,255,255,0.13);
+      --text:      #dde8f6;
+      --muted:     #4e6275;
+      --dim:       #2a3545;
+      --header-h:  58px;
 
-      --c-source:   #6366f1;
-      --c-int:      #0ea5e9;
-      --c-ext:      #8b5cf6;
-      --c-deident:  #f59e0b;
-      --c-self:     #14b8a6;
-
-      --header-h: 62px;
+      --source:    #6366f1;
+      --int:       #0ea5e9;
+      --ext:       #8b5cf6;
+      --deident:   #f59e0b;
+      --self:      #14b8a6;
     }
 
     html, body {
-      width: 100%; height: 100%;
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg); color: var(--text);
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
+      width:100%; height:100%; overflow:hidden;
+      font-family:'Inter', system-ui, sans-serif;
+      background:var(--bg); color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
     }
-    #app { display: flex; flex-direction: column; height: 100vh; }
+    #app { display:flex; flex-direction:column; height:100vh; }
 
-    /* ── Header ─────────────────────────────────────────── */
+    /* ════════════════════════ HEADER ════════════════════════ */
     header {
-      height: var(--header-h);
-      display: flex; align-items: center;
-      padding: 0 20px; gap: 14px;
-      background: rgba(7,11,19,0.96);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(16px);
-      z-index: 100; flex-shrink: 0;
-      overflow: hidden;
+      height:var(--header-h); flex-shrink:0;
+      display:flex; align-items:center; gap:12px; padding:0 18px;
+      background:rgba(6,10,16,0.97);
+      border-bottom:1px solid var(--border);
+      backdrop-filter:blur(20px);
+      z-index:100;
     }
 
-    /* Logo */
-    .hdr-logo {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      display: flex; align-items: center; justify-content: center;
+    .h-logo {
+      width:34px; height:34px; border-radius:9px; flex-shrink:0;
+      background:linear-gradient(140deg,#4338ca,#7c3aed);
+      display:flex; align-items:center; justify-content:center;
     }
-    .hdr-logo svg { width: 18px; height: 18px; }
+    .h-logo svg { width:16px; height:16px; }
 
-    /* Title block */
-    .hdr-title-block { flex-shrink: 0; }
-    .hdr-title { font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
-    .hdr-sub   { font-size: 10px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; }
+    .h-title-block { flex-shrink:0; line-height:1; }
+    .h-title { font-size:13px; font-weight:700; color:var(--text); letter-spacing:-0.01em; }
+    .h-sub   { font-size:9.5px; color:var(--muted); margin-top:3px; letter-spacing:0.01em; }
 
-    /* Badge */
-    .hdr-badge {
-      flex-shrink: 0;
-      display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(20,184,166,0.12); border: 1px solid rgba(20,184,166,0.25);
-      border-radius: 20px; padding: 2px 9px;
-      font-size: 9.5px; font-weight: 600; color: #5eead4;
-      letter-spacing: 0.06em; text-transform: uppercase;
-      white-space: nowrap;
+    .h-badge {
+      flex-shrink:0; display:inline-flex; align-items:center; gap:4px;
+      padding:2px 8px; border-radius:20px; font-size:9px; font-weight:600;
+      letter-spacing:0.07em; text-transform:uppercase;
+      background:rgba(20,184,166,0.1); border:1px solid rgba(20,184,166,0.22);
+      color:#5eead4;
     }
-    .hdr-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: #14b8a6; }
+    .h-badge-pip { width:4px; height:4px; border-radius:50%; background:#14b8a6; }
 
-    /* Divider */
-    .hdr-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+    .h-sep { width:1px; height:26px; background:var(--border); flex-shrink:0; }
 
     /* Legend */
-    .hdr-legend {
-      display: flex; align-items: center; gap: 2px;
-      flex: 1; min-width: 0; overflow: hidden;
+    .h-legend { display:flex; align-items:center; gap:1px; flex:1; min-width:0; overflow:hidden; }
+    .leg {
+      display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px;
+      font-size:10px; font-weight:500; color:var(--muted); cursor:pointer;
+      user-select:none; white-space:nowrap; flex-shrink:0;
+      transition:background 0.15s, color 0.15s;
     }
-    .leg-item {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 10.5px; color: var(--text-muted);
-      cursor: pointer; padding: 4px 8px; border-radius: 6px;
-      transition: background 0.15s, color 0.15s; user-select: none;
-      white-space: nowrap; flex-shrink: 0;
-    }
-    .leg-item:hover  { background: var(--surface2); color: var(--text); }
-    .leg-item.active { color: var(--text); }
-    .leg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .leg:hover { background:var(--surface2); color:var(--text); }
+    .leg.on { color:var(--text); }
+    .leg-pip { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
     /* Controls */
-    .hdr-ctrl { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-    .ctrl-btn {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text-muted); padding: 5px 11px; border-radius: 7px;
-      font-size: 11px; font-weight: 500; cursor: pointer;
-      transition: all 0.15s; font-family: inherit; white-space: nowrap;
-      display: flex; align-items: center; gap: 5px;
+    .h-ctrl { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+    .btn {
+      display:flex; align-items:center; gap:5px;
+      padding:5px 11px; border-radius:7px; font-size:10.5px; font-weight:500;
+      border:1px solid var(--border); background:var(--surface);
+      color:var(--muted); cursor:pointer; font-family:inherit;
+      transition:all 0.15s; white-space:nowrap;
     }
-    .ctrl-btn:hover  { background: var(--surface2); color: var(--text); border-color: var(--border2); }
-    .ctrl-btn.active { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
-    .ctrl-btn svg    { width: 12px; height: 12px; flex-shrink: 0; }
+    .btn svg { width:11px; height:11px; flex-shrink:0; }
+    .btn:hover { background:var(--surface2); color:var(--text); border-color:var(--border2); }
+    .btn.on  { background:rgba(99,102,241,0.14); border-color:rgba(99,102,241,0.36); color:#a5b4fc; }
 
-    .search-wrap { position: relative; }
-    .search-wrap input {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); padding: 5px 10px 5px 28px;
-      border-radius: 7px; font-size: 11px; font-family: inherit;
-      width: 170px; outline: none; transition: all 0.2s;
+    .srch { position:relative; }
+    .srch input {
+      background:var(--surface); border:1px solid var(--border); color:var(--text);
+      padding:5px 9px 5px 27px; border-radius:7px; font-size:10.5px;
+      font-family:inherit; width:160px; outline:none; transition:all 0.2s;
     }
-    .search-wrap input::placeholder { color: var(--text-dim); }
-    .search-wrap input:focus { border-color: var(--border2); background: var(--surface2); width: 210px; }
-    .search-icon {
-      position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
-      color: var(--text-dim); pointer-events: none;
-    }
-    .search-icon svg { width: 12px; height: 12px; display: block; }
+    .srch input:focus { border-color:var(--border2); background:var(--surface2); width:195px; }
+    .srch input::placeholder { color:var(--dim); }
+    .srch-ic { position:absolute; left:8px; top:50%; transform:translateY(-50%); color:var(--dim); pointer-events:none; }
+    .srch-ic svg { width:11px; height:11px; display:block; }
 
-    /* ── Canvas ─────────────────────────────────────────── */
-    #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
-    svg#graph { width: 100%; height: 100%; cursor: grab; display: block; }
-    svg#graph:active { cursor: grabbing; }
+    /* ════════════════════════ CANVAS ════════════════════════ */
+    #wrap { flex:1; position:relative; overflow:hidden; }
+    svg#g { width:100%; height:100%; cursor:grab; display:block; }
+    svg#g:active { cursor:grabbing; }
 
-    /* ── Phase pills ─── */
-    #phase-pills {
-      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px; z-index: 50;
+    /* ── Phase pills ── */
+    #pills {
+      position:absolute; top:12px; left:50%; transform:translateX(-50%);
+      display:flex; gap:5px; z-index:50;
     }
-    .phase-pill {
-      padding: 5px 13px; border-radius: 20px;
-      font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em;
-      cursor: pointer; transition: all 0.2s;
-      background: rgba(7,11,19,0.9); border: 1px solid var(--border);
-      color: var(--text-muted); backdrop-filter: blur(12px);
-      user-select: none; white-space: nowrap;
+    .pill {
+      padding:4px 12px; border-radius:20px; font-size:10px; font-weight:600;
+      letter-spacing:0.015em; cursor:pointer; user-select:none; white-space:nowrap;
+      background:rgba(6,10,16,0.92); border:1px solid var(--border);
+      color:var(--muted); backdrop-filter:blur(10px);
+      transition:all 0.18s;
     }
-    .phase-pill:hover { border-color: var(--border2); color: var(--text); }
-    .phase-pill.active { color: #fff; border-color: transparent; }
-    .phase-pill.active[data-phase="all"]    { background: linear-gradient(135deg,#4338ca,#7c3aed); }
-    .phase-pill.active[data-phase="source"] { background: linear-gradient(135deg,#4f46e5,#6366f1); }
-    .phase-pill.active[data-phase="int"]    { background: linear-gradient(135deg,#0369a1,#0ea5e9); }
-    .phase-pill.active[data-phase="ext"]    { background: linear-gradient(135deg,#6d28d9,#8b5cf6); }
+    .pill:hover { border-color:var(--border2); color:var(--text); }
+    .pill.on { color:#fff; border-color:transparent; }
+    .pill.on[data-p="all"]    { background:linear-gradient(135deg,#3730a3,#6d28d9); }
+    .pill.on[data-p="source"] { background:linear-gradient(135deg,#4338ca,#6366f1); }
+    .pill.on[data-p="int"]    { background:linear-gradient(135deg,#0369a1,#0ea5e9); }
+    .pill.on[data-p="ext"]    { background:linear-gradient(135deg,#6d28d9,#8b5cf6); }
 
-    /* ── Stats ─── */
-    #stats-bar {
-      position: absolute; top: 14px; right: 20px;
-      display: flex; gap: 8px; z-index: 50;
+    /* ── Stats ── */
+    #stats { position:absolute; top:12px; right:18px; display:flex; gap:7px; z-index:50; }
+    .stat {
+      background:rgba(6,10,16,0.92); border:1px solid var(--border);
+      border-radius:8px; padding:5px 11px; text-align:center; backdrop-filter:blur(10px);
+      min-width:50px;
     }
-    .stat-box {
-      background: rgba(9,13,24,0.9); border: 1px solid var(--border);
-      border-radius: 9px; padding: 6px 12px; text-align: center;
-      backdrop-filter: blur(12px); min-width: 56px;
-    }
-    .stat-val { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
-    .stat-lbl { font-size: 8.5px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+    .stat-n { font-size:14px; font-weight:700; letter-spacing:-0.02em; line-height:1.1; }
+    .stat-l { font-size:8px; color:var(--muted); font-weight:600; letter-spacing:0.09em; text-transform:uppercase; margin-top:2px; }
 
-    /* ── SVG node elements ─── */
-    .lane-label {
-      font-family: 'Inter', sans-serif;
-      font-size: 9.5px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-    }
+    /* ── SVG elements ── */
+    .lane-label { font-family:'Inter',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.11em; text-transform:uppercase; }
 
-    .link { fill: none; stroke-opacity: 0.4; stroke-width: 1.5; transition: stroke-opacity 0.2s; }
-    .link.highlighted { stroke-opacity: 0.95; stroke-width: 2.5; }
-    .link.dimmed       { stroke-opacity: 0.05; }
-    marker path { stroke: none; }
+    .link { fill:none; stroke-opacity:0.38; stroke-width:1.4; }
+    .link.hi  { stroke-opacity:0.9; stroke-width:2.2; }
+    .link.dim { stroke-opacity:0.04; }
 
-    .node-group { cursor: pointer; }
-    .node-circle { transition: stroke-width 0.2s, filter 0.2s; stroke-width: 2; }
-    .node-group:hover .node-circle { stroke-width: 3.5; }
-    .node-group.selected .node-circle { stroke-width: 4; }
-    .node-group.dimmed { opacity: 0.12; pointer-events: none; }
+    .node-g { cursor:pointer; }
+    .node-g.dim { opacity:0.1; pointer-events:none; }
+    .node-g.sel .node-ring { stroke-width:3.5; }
+    .node-g:hover .node-ring { stroke-width:3; }
+    .node-ring { stroke-width:2; transition:stroke-width 0.18s; }
 
-    /* Node label text — rendered via foreignObject for wrapping */
-    .node-fo { overflow: visible; pointer-events: none; }
-    .node-fo-inner {
-      display: flex; flex-direction: column; align-items: center;
-      width: 100%; text-align: center;
+    /* ── Node labels via foreignObject ── */
+    .lbl-fo { overflow:visible; pointer-events:none; }
+    .lbl-wrap {
+      display:inline-flex; flex-direction:column; align-items:center;
+      text-align:center; padding:4px 8px 5px;
+      background:rgba(6,10,16,0.88);
+      backdrop-filter:blur(8px) saturate(1.4);
+      -webkit-backdrop-filter:blur(8px) saturate(1.4);
+      border-radius:6px;
+      border-top:2px solid var(--accent-color, rgba(255,255,255,0.1));
+      box-shadow:0 4px 16px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+      width:max-content; max-width:100%;
     }
-    .node-fo-label {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px; font-weight: 600; line-height: 1.3;
-      color: #c8d6f0; word-break: break-word;
-      text-shadow: 0 0 6px #070b13, 0 0 10px #070b13;
-      max-width: 100%;
+    .lbl-main {
+      font-family:'Inter',sans-serif; font-size:10.5px; font-weight:600;
+      color:#dde8f6; line-height:1.25; letter-spacing:-0.005em;
+      white-space:nowrap;
     }
-    .node-fo-sub {
-      font-family: 'Inter', sans-serif;
-      font-size: 8.5px; font-weight: 400; line-height: 1.3;
-      color: #4e6080; margin-top: 2px; word-break: break-word;
-      text-shadow: 0 0 6px #070b13;
-      max-width: 100%;
+    .lbl-sub {
+      font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:400;
+      color:var(--muted); margin-top:2px; letter-spacing:0.02em;
+      white-space:nowrap;
     }
 
-    /* ── Info panel ─── */
-    #info-panel {
-      position: absolute; bottom: 20px; right: 20px; width: 320px;
-      background: rgba(9,13,24,0.95); border: 1px solid var(--border2);
-      border-radius: 16px; padding: 20px; backdrop-filter: blur(24px);
-      transition: opacity 0.25s, transform 0.25s; z-index: 50;
-      max-height: calc(100vh - var(--header-h) - 56px);
-      overflow-y: auto;
+    /* ── Info panel ── */
+    #panel {
+      position:absolute; bottom:18px; right:18px; width:308px;
+      background:rgba(7,11,20,0.96); border:1px solid var(--border2);
+      border-radius:14px; padding:18px; backdrop-filter:blur(24px);
+      transition:opacity 0.22s, transform 0.22s; z-index:50;
+      max-height:calc(100% - 90px); overflow-y:auto;
     }
-    #info-panel.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; }
-    #info-panel::-webkit-scrollbar { width: 4px; }
-    #info-panel::-webkit-scrollbar-track { background: transparent; }
-    #info-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    #panel.hide { opacity:0; transform:translateY(6px); pointer-events:none; }
+    #panel::-webkit-scrollbar { width:3px; }
+    #panel::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
 
-    .p-phase  { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 7px; }
-    .p-title  { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; line-height: 1.25; }
-    .p-cat    { font-size: 10px; color: var(--text-muted); margin-bottom: 11px; font-weight: 500; }
-    .p-std    {
-      display: flex; align-items: flex-start; gap: 8px; margin-bottom: 11px;
-      background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.18);
-      border-radius: 9px; padding: 9px 11px;
+    .p-phase { font-size:8.5px; font-weight:700; letter-spacing:0.13em; text-transform:uppercase; margin-bottom:6px; }
+    .p-name  { font-size:14.5px; font-weight:700; letter-spacing:-0.02em; line-height:1.2; margin-bottom:2px; }
+    .p-cat   { font-size:9.5px; color:var(--muted); margin-bottom:10px; }
+    .p-std-box {
+      display:flex; gap:8px; margin-bottom:10px; padding:9px 10px;
+      background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.17);
+      border-radius:8px; align-items:flex-start;
     }
-    .p-std-icon { flex-shrink: 0; margin-top: 1px; color: #818cf8; }
-    .p-std-icon svg { width: 13px; height: 13px; display: block; }
-    .p-std-body { font-size: 11px; line-height: 1.55; color: #8fa3c8; min-width: 0; }
-    .p-std-label{ font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #6366f1; margin-bottom: 3px; }
-    .p-desc   { font-size: 11.5px; line-height: 1.65; color: #7a92b5; margin-bottom: 12px; }
-    .p-tags   { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
-    .p-tag    { font-size: 9.5px; padding: 2px 8px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-    .p-conns  { border-top: 1px solid var(--border); padding-top: 10px; }
-    .p-conns-ttl { font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
-    .p-conn-item { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--text-muted); margin-bottom: 4px; }
-    .p-conn-arr  { font-size: 9px; color: var(--text-dim); }
-    .p-conn-name { color: #8fa3c8; }
+    .p-std-ic { color:#818cf8; flex-shrink:0; margin-top:1px; }
+    .p-std-ic svg { width:12px; height:12px; display:block; }
+    .p-std-body { font-size:10.5px; color:#7a92b5; line-height:1.5; }
+    .p-std-ttl { font-size:8px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#6366f1; margin-bottom:3px; }
+    .p-desc { font-size:11px; color:#6d84a6; line-height:1.65; margin-bottom:10px; }
+    .p-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+    .p-tag  { font-size:9px; padding:2px 7px; border-radius:20px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; }
+    .p-conns { border-top:1px solid var(--border); padding-top:9px; }
+    .p-ct { font-size:8px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim); margin-bottom:7px; }
+    .p-ci { display:flex; align-items:center; gap:7px; font-size:10.5px; color:var(--muted); margin-bottom:3px; }
+    .p-ca { color:var(--dim); font-size:9px; }
+    .p-cn { color:#8fa3c8; }
 
-    /* ── Zoom controls ─── */
-    #zoom-ctrls {
-      position: absolute; bottom: 20px; left: 20px;
-      display: flex; flex-direction: column; gap: 4px; z-index: 50;
+    /* ── Zoom ── */
+    #zoom { position:absolute; bottom:18px; left:18px; display:flex; flex-direction:column; gap:3px; z-index:50; }
+    .zbtn {
+      width:32px; height:32px; border-radius:7px; font-size:15px; font-weight:600;
+      background:rgba(7,11,20,0.94); border:1px solid var(--border2);
+      color:var(--muted); cursor:pointer; display:flex; align-items:center;
+      justify-content:center; transition:all 0.14s; backdrop-filter:blur(10px); font-family:inherit;
     }
-    .zoom-btn {
-      width: 34px; height: 34px; border-radius: 8px;
-      background: rgba(9,13,24,0.92); border: 1px solid var(--border2);
-      color: var(--text-muted); font-size: 16px; font-weight: 500;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s; backdrop-filter: blur(12px); font-family: inherit;
-    }
-    .zoom-btn:hover { background: var(--surface2); color: var(--text); }
+    .zbtn:hover { background:var(--surface2); color:var(--text); }
+    .zbtn svg { width:13px; height:13px; }
 
-    /* ── Tooltip ─── */
-    #tooltip {
-      position: absolute; pointer-events: none;
-      background: rgba(7,11,19,0.97); border: 1px solid var(--border2);
-      border-radius: 7px; padding: 7px 11px;
-      font-size: 11px; color: var(--text);
-      backdrop-filter: blur(12px); opacity: 0;
-      transition: opacity 0.12s; z-index: 200;
-      white-space: nowrap; max-width: 260px;
+    /* ── Tooltip ── */
+    #tip {
+      position:absolute; pointer-events:none;
+      background:rgba(6,10,16,0.98); border:1px solid var(--border2);
+      border-radius:7px; padding:6px 10px; font-size:10.5px; color:var(--text);
+      backdrop-filter:blur(12px); opacity:0; transition:opacity 0.1s;
+      z-index:200; white-space:nowrap;
     }
 
-    /* ── Link legend ─── */
-    #link-legend {
-      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 14px; z-index: 50;
-      background: rgba(9,13,24,0.9); border: 1px solid var(--border);
-      border-radius: 10px; padding: 7px 16px; backdrop-filter: blur(12px);
-      white-space: nowrap;
+    /* ── Link legend ── */
+    #lleg {
+      position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
+      display:flex; gap:12px; z-index:50; padding:6px 15px;
+      background:rgba(7,11,20,0.92); border:1px solid var(--border);
+      border-radius:9px; backdrop-filter:blur(10px);
     }
-    .ll-item { display: flex; align-items: center; gap: 5px; font-size: 9.5px; color: var(--text-muted); }
-    .ll-line { width: 22px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+    .ll { display:flex; align-items:center; gap:5px; font-size:9px; color:var(--muted); white-space:nowrap; }
+    .ll-l { width:20px; height:1.5px; border-radius:1px; flex-shrink:0; }
 
-    /* ── Standards watermark ─── */
-    #fw-stamp {
-      position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%);
-      font-size: 9px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500;
-      text-transform: uppercase; z-index: 50; pointer-events: none;
-      font-family: 'JetBrains Mono', monospace; white-space: nowrap;
+    /* ── Standards strip ── */
+    #stamp {
+      position:absolute; bottom:54px; left:50%; transform:translateX(-50%);
+      font-size:8.5px; color:var(--dim); letter-spacing:0.1em; font-weight:500;
+      text-transform:uppercase; z-index:50; pointer-events:none;
+      font-family:'JetBrains Mono',monospace; white-space:nowrap;
     }
 
-    /* pulse animation */
-    @keyframes pulse-ring { 0%{opacity:0.6;} 100%{r:52px;opacity:0;} }
-    .pulse-ring { animation: pulse-ring 1.8s ease-out infinite; fill: none; }
+    @keyframes pulse { 0%{opacity:.5;r:0} 100%{opacity:0;r:48px} }
+    .pring { animation:pulse 2s ease-out infinite; fill:none; }
   </style>
 </head>
 <body>
 <div id="app">
   <header>
     <!-- Logo -->
-    <div class="hdr-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+    <div class="h-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
       </svg>
     </div>
 
     <!-- Title -->
-    <div class="hdr-title-block">
-      <div class="hdr-title">Health Data Architecture Framework</div>
-      <div class="hdr-sub">Clinical &amp; Research Data Pipeline &nbsp;·&nbsp; Industry Standard Model</div>
+    <div class="h-title-block">
+      <div class="h-title">Health Data Architecture Framework</div>
+      <div class="h-sub">Clinical &amp; Research Data Pipeline &nbsp;·&nbsp; Industry Standard Model</div>
     </div>
 
     <!-- Badge -->
-    <div class="hdr-badge">
-      <div class="hdr-badge-dot"></div>
-      PHI-Free &nbsp;·&nbsp; Shareable
-    </div>
-
-    <div class="hdr-divider"></div>
+    <div class="h-badge"><div class="h-badge-pip"></div>PHI-Free · Shareable</div>
+    <div class="h-sep"></div>
 
     <!-- Legend -->
-    <div class="hdr-legend" id="legend">
-      <div class="leg-item active" data-phase="source">
-        <div class="leg-dot" style="background:#6366f1;box-shadow:0 0 5px #6366f1;"></div>Operational
-      </div>
-      <div class="leg-item active" data-phase="int">
-        <div class="leg-dot" style="background:#0ea5e9;box-shadow:0 0 5px #0ea5e9;"></div>Internal Research
-      </div>
-      <div class="leg-item active" data-phase="ext">
-        <div class="leg-dot" style="background:#8b5cf6;box-shadow:0 0 5px #8b5cf6;"></div>External Collab
-      </div>
-      <div class="leg-item active" data-phase="deident">
-        <div class="leg-dot" style="background:#f59e0b;box-shadow:0 0 5px #f59e0b;"></div>De-Identified
-      </div>
-      <div class="leg-item active" data-phase="self">
-        <div class="leg-dot" style="background:#14b8a6;box-shadow:0 0 5px #14b8a6;"></div>Self-Service
-      </div>
+    <div class="h-legend" id="legend">
+      <div class="leg on" data-phase="source"><div class="leg-pip" style="background:#6366f1;box-shadow:0 0 5px #6366f1aa;"></div>Operational</div>
+      <div class="leg on" data-phase="int"><div class="leg-pip" style="background:#0ea5e9;box-shadow:0 0 5px #0ea5e9aa;"></div>Internal Research</div>
+      <div class="leg on" data-phase="ext"><div class="leg-pip" style="background:#8b5cf6;box-shadow:0 0 5px #8b5cf6aa;"></div>External Collab</div>
+      <div class="leg on" data-phase="deident"><div class="leg-pip" style="background:#f59e0b;box-shadow:0 0 5px #f59e0baa;"></div>De-Identified</div>
+      <div class="leg on" data-phase="self"><div class="leg-pip" style="background:#14b8a6;box-shadow:0 0 5px #14b8a6aa;"></div>Self-Service</div>
     </div>
-
-    <div class="hdr-divider"></div>
+    <div class="h-sep"></div>
 
     <!-- Controls -->
-    <div class="hdr-ctrl">
-      <div class="search-wrap">
-        <div class="search-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-        </div>
-        <input type="text" id="search-input" placeholder="Search nodes…" autocomplete="off" />
+    <div class="h-ctrl">
+      <div class="srch">
+        <div class="srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+        <input type="text" id="search" placeholder="Search nodes…" autocomplete="off"/>
       </div>
-      <button class="ctrl-btn active" id="btn-flow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        Flow
+      <button class="btn on" id="bflow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>Flow
       </button>
-      <button class="ctrl-btn active" id="btn-labels">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8l-4 4h16l-4-4z"/></svg>
-        Labels
+      <button class="btn on" id="blbl">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L4 7h16l-4-4z"/></svg>Labels
       </button>
-      <button class="ctrl-btn" id="btn-reset">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        Reset
+      <button class="btn" id="brst">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Reset
       </button>
     </div>
   </header>
 
-  <div id="canvas-wrap">
+  <div id="wrap">
     <!-- Phase filter pills -->
-    <div id="phase-pills">
-      <div class="phase-pill active" data-phase="all">All Phases</div>
-      <div class="phase-pill" data-phase="source">Operational</div>
-      <div class="phase-pill" data-phase="int">Internal Research</div>
-      <div class="phase-pill" data-phase="ext">External Collab</div>
+    <div id="pills">
+      <div class="pill on" data-p="all">All Phases</div>
+      <div class="pill" data-p="source">Operational</div>
+      <div class="pill" data-p="int">Internal Research</div>
+      <div class="pill" data-p="ext">External Collab</div>
     </div>
 
     <!-- Stats -->
-    <div id="stats-bar">
-      <div class="stat-box"><div class="stat-val" id="stat-nodes">–</div><div class="stat-lbl">Nodes</div></div>
-      <div class="stat-box"><div class="stat-val" id="stat-edges">–</div><div class="stat-lbl">Connections</div></div>
-      <div class="stat-box"><div class="stat-val" id="stat-focus">–</div><div class="stat-lbl">Focused</div></div>
+    <div id="stats">
+      <div class="stat"><div class="stat-n" id="sn">–</div><div class="stat-l">Nodes</div></div>
+      <div class="stat"><div class="stat-n" id="se">–</div><div class="stat-l">Links</div></div>
+      <div class="stat"><div class="stat-n" id="sf">–</div><div class="stat-l">Focus</div></div>
     </div>
 
-    <svg id="graph"></svg>
+    <svg id="g"></svg>
 
-    <!-- Zoom controls -->
-    <div id="zoom-ctrls">
-      <button class="zoom-btn" id="zoom-in">+</button>
-      <button class="zoom-btn" id="zoom-fit">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    <!-- Zoom -->
+    <div id="zoom">
+      <button class="zbtn" id="zi">+</button>
+      <button class="zbtn" id="zf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
       </button>
-      <button class="zoom-btn" id="zoom-out">−</button>
+      <button class="zbtn" id="zo">−</button>
     </div>
+
+    <!-- Standards stamp -->
+    <div id="stamp">OMOP &nbsp;·&nbsp; PCORNet &nbsp;·&nbsp; i2b2 &nbsp;·&nbsp; HL7 FHIR &nbsp;·&nbsp; HIPAA Safe Harbor &nbsp;·&nbsp; Expert Determination</div>
 
     <!-- Link legend -->
-    <div id="fw-stamp">OMOP &nbsp;·&nbsp; PCORNet &nbsp;·&nbsp; i2b2 &nbsp;·&nbsp; HL7 FHIR &nbsp;·&nbsp; HIPAA Safe Harbor &nbsp;·&nbsp; Expert Determination</div>
-    <div id="link-legend">
-      <div class="ll-item"><div class="ll-line" style="background:#818cf8;"></div>Primary Flow</div>
-      <div class="ll-item"><div class="ll-line" style="background:repeating-linear-gradient(90deg,#6b7a99 0,#6b7a99 4px,transparent 4px,transparent 8px);"></div>Secondary</div>
-      <div class="ll-item"><div class="ll-line" style="background:#f59e0b;"></div>De-Identification</div>
-      <div class="ll-item"><div class="ll-line" style="background:repeating-linear-gradient(90deg,#14b8a6 0,#14b8a6 5px,transparent 5px,transparent 9px);"></div>Self-Service</div>
-      <div class="ll-item"><div class="ll-line" style="background:repeating-linear-gradient(90deg,#34d399 0,#34d399 3px,transparent 3px,transparent 7px);"></div>Cohort</div>
-      <div class="ll-item"><div class="ll-line" style="background:#a78bfa;"></div>Federation</div>
+    <div id="lleg">
+      <div class="ll"><div class="ll-l" style="background:#818cf8;"></div>Primary Flow</div>
+      <div class="ll"><div class="ll-l" style="background:repeating-linear-gradient(90deg,#6b7a99 0,#6b7a99 4px,transparent 4px,transparent 8px);"></div>Secondary</div>
+      <div class="ll"><div class="ll-l" style="background:#f59e0b;"></div>De-Identification</div>
+      <div class="ll"><div class="ll-l" style="background:repeating-linear-gradient(90deg,#14b8a6 0,#14b8a6 5px,transparent 5px,transparent 9px);"></div>Self-Service</div>
+      <div class="ll"><div class="ll-l" style="background:repeating-linear-gradient(90deg,#34d399 0,#34d399 3px,transparent 3px,transparent 7px);"></div>Cohort</div>
+      <div class="ll"><div class="ll-l" style="background:#a78bfa;"></div>Federation</div>
     </div>
 
     <!-- Info panel -->
-    <div id="info-panel" class="hidden">
-      <div class="p-phase" id="p-phase">–</div>
-      <div class="p-title" id="p-title">–</div>
-      <div class="p-cat"   id="p-cat">–</div>
-      <div class="p-std">
-        <div class="p-std-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        </div>
-        <div class="p-std-body">
-          <div class="p-std-label">Industry Standard</div>
-          <div id="p-std-text">–</div>
-        </div>
+    <div id="panel" class="hide">
+      <div class="p-phase" id="pp">–</div>
+      <div class="p-name"  id="pn">–</div>
+      <div class="p-cat"   id="pc">–</div>
+      <div class="p-std-box">
+        <div class="p-std-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <div class="p-std-body"><div class="p-std-ttl">Industry Standard</div><div id="ps">–</div></div>
       </div>
-      <div class="p-desc" id="p-desc">–</div>
-      <div class="p-tags" id="p-tags"></div>
-      <div class="p-conns">
-        <div class="p-conns-ttl">Data Connections</div>
-        <div id="p-conns"></div>
-      </div>
+      <div class="p-desc" id="pd">–</div>
+      <div class="p-tags" id="pt"></div>
+      <div class="p-conns"><div class="p-ct">Data Connections</div><div id="pcon"></div></div>
     </div>
 
-    <div id="tooltip"></div>
+    <div id="tip"></div>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════════════
-// DATA — All labels use broad industry classifications.
-// No institution-specific names, proprietary system names, or PHI.
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// ICON LIBRARY — purpose-built geometric SVG, designed at ±8 px scale
+// All stroke-based, no fill, no clipart, no emoji
+// ═══════════════════════════════════════════════════════════════════════
+const IC = {
+  // Medical cross — 2 perpendicular lines, round caps
+  ehr: `<line x1="0" y1="-6" x2="0" y2="6"/>
+        <line x1="-6" y1="0" x2="6" y2="0"/>`,
 
-const PHASES = {
-  source:  { label:'Operational & Source Systems',         color:'#6366f1', glow:'rgba(99,102,241,0.3)'  },
-  int:     { label:'Internal Research Environment',        color:'#0ea5e9', glow:'rgba(14,165,233,0.3)'  },
-  ext:     { label:'External Collaborative Research',      color:'#8b5cf6', glow:'rgba(139,92,246,0.3)'  },
-  deident: { label:'De-Identified (PHI-Free) Environment', color:'#f59e0b', glow:'rgba(245,158,11,0.3)'  },
-  self:    { label:'Self-Service Analytics',               color:'#14b8a6', glow:'rgba(20,184,166,0.3)'  },
+  // Database cylinder — ellipses + verticals
+  opsdw: `<ellipse cx="0" cy="-4.5" rx="6" ry="2"/>
+          <line x1="-6" y1="-4.5" x2="-6" y2="4.5"/>
+          <line x1="6"  y1="-4.5" x2="6"  y2="4.5"/>
+          <ellipse cx="0" cy="4.5" rx="6" ry="2"/>
+          <ellipse cx="0" cy="-0.5" rx="6" ry="2" opacity=".35"/>`,
+
+  // Document with horizontal lines
+  research_capture: `<rect x="-5" y="-7" width="10" height="13" rx="1.5"/>
+                     <line x1="-2.5" y1="-2.5" x2="2.5" y2="-2.5"/>
+                     <line x1="-2.5" y1="0.5"  x2="2.5" y2="0.5"/>
+                     <line x1="-2.5" y1="3.5"  x2="0.5" y2="3.5"/>`,
+
+  // Payment card with chip
+  claims: `<rect x="-6.5" y="-4.5" width="13" height="9" rx="1.5"/>
+           <rect x="-4.5" y="0.5"  width="3.5" height="2.5" rx="0.75"/>
+           <line x1="-6.5" y1="-1.5" x2="6.5" y2="-1.5"/>`,
+
+  // Bar chart — 3 columns + baseline
+  op_analytics: `<line x1="-7" y1="6" x2="7" y2="6"/>
+                 <rect x="-6" y="-1" width="3.5" height="7" rx="0.5"/>
+                 <rect x="-1" y="-6" width="3.5" height="12" rx="0.5"/>
+                 <rect x="4"  y="2"  width="3.5" height="4"  rx="0.5"/>`,
+
+  // Diamond / rhombus — data warehouse symbol
+  int_cdw: `<polygon points="0,-8 7.5,-1.5 0,5 -7.5,-1.5"/>
+            <line x1="-4.5" y1="-1.5" x2="4.5" y2="-1.5"/>
+            <line x1="-2.5" y1="-4.5" x2="2.5" y2="-4.5" opacity=".5"/>
+            <line x1="-2.5" y1="1.5"  x2="2.5" y2="1.5"  opacity=".5"/>`,
+
+  // 2×2 schema grid
+  cdm: `<rect x="-7" y="-7" width="5.5" height="5.5" rx="1"/>
+        <rect x="1.5" y="-7" width="5.5" height="5.5" rx="1"/>
+        <rect x="-7"  y="1.5" width="5.5" height="5.5" rx="1"/>
+        <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/>`,
+
+  // Shield + checkmark
+  deident_int: `<path d="M0,-8 L7,-4.5 L7,0.5 Q6,7 0,9 Q-6,7 -7,0.5 L-7,-4.5 Z"/>
+                <polyline points="-3.5,1 -0.5,4 4,-2.5"/>`,
+
+  // Two person silhouettes
+  cohorts: `<circle cx="-2.5" cy="-5" r="2.5"/>
+            <path d="M-6.5,6 Q-6.5,0 -2.5,0 Q1.5,0 1.5,6"/>
+            <circle cx="3.5" cy="-4" r="2"/>
+            <path d="M0.5,5.5 Q1,0.5 3.5,0.5 Q7,0.5 7,5.5" opacity=".7"/>`,
+
+  // Globe — circle + lat/long
+  ext_hub: `<circle cx="0" cy="0" r="7"/>
+            <ellipse cx="0" cy="0" rx="3.5" ry="7"/>
+            <line x1="-7" y1="0" x2="7" y2="0"/>
+            <path d="M-6,-3.5 Q0,-4.5 6,-3.5" opacity=".55"/>
+            <path d="M-6,3.5  Q0,4.5  6,3.5"  opacity=".55"/>`,
+
+  // Lock + outward network lines
+  deident_ext: `<rect x="-5" y="-1" width="10" height="8.5" rx="1.5"/>
+                <path d="M-3,-1 L-3,-4 Q-3,-8 0,-8 Q3,-8 3,-4 L3,-1"/>
+                <circle cx="0" cy="3.5" r="1.5"/>
+                <circle cx="-7" cy="-5.5" r="1" opacity=".7"/>
+                <circle cx="7"  cy="-5.5" r="1" opacity=".7"/>
+                <line x1="-5.8" y1="-4.8" x2="-4" y2="-2.5" opacity=".7"/>
+                <line x1="5.8"  y1="-4.8" x2="4"  y2="-2.5" opacity=".7"/>`,
+
+  // Pediment + columns — institution
+  academic: `<polygon points="0,-9 8,-5 -8,-5"/>
+             <line x1="-5.5" y1="-5" x2="-5.5" y2="7"/>
+             <line x1="0"    y1="-5" x2="0"    y2="7"/>
+             <line x1="5.5"  y1="-5" x2="5.5"  y2="7"/>
+             <line x1="-8"   y1="7"  x2="8"    y2="7"/>`,
+
+  // Hexagon — industry / pharma
+  industry: `<polygon points="0,-8 6.9,-4 6.9,4 0,8 -6.9,4 -6.9,-4"/>
+             <line x1="-3.5" y1="0" x2="3.5" y2="0"/>
+             <line x1="0" y1="-4"   x2="0"   y2="4"/>`,
+
+  // Magnifier over data dots
+  self_ext: `<circle cx="-1.5" cy="-1.5" r="5.5"/>
+             <line x1="3"  y1="3"  x2="7.5" y2="7.5" stroke-linecap="round" stroke-width="2.2"/>
+             <circle cx="-3.5" cy="-3.5" r=".9"/>
+             <circle cx="-0.5" cy="-3.5" r=".9"/>
+             <circle cx="-3.5" cy="-0.5" r=".9"/>
+             <circle cx="-0.5" cy="-0.5" r=".9"/>`,
 };
 
-// SVG path icons — one per node (no emoji)
-const ICONS = {
-  // Cross / medical cross
-  ehr:              'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 13H11v-4H7v-2h4V5h2v4h4v2h-4v4z',
-  // Database stack
-  opsdw:            'M4 6c0-1.1 3.58-2 8-2s8 .9 8 2v2c0 1.1-3.58 2-8 2s-8-.9-8-2V6zm0 5c0-1.1 3.58-2 8-2s8 .9 8 2v2c0 1.1-3.58 2-8 2s-8-.9-8-2v-2zm0 5c0-1.1 3.58-2 8-2s8 .9 8 2v2c0 1.1-3.58 2-8 2s-8-.9-8-2v-2z',
-  // Clipboard
-  research_capture: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4',
-  // Credit card
-  claims:           'M2 5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5zm0 5h20M6 15h.01M10 15h4',
-  // Bar chart
-  op_analytics:     'M3 3v18h18M9 9v9m4-5v5m4-9v9',
-  // Building columns
-  int_cdw:          'M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 10v11M12 10v11M16 10v11',
-  // Grid / puzzle
-  cdm:              'M4 4h6v6H4V4zm0 10h6v6H4v-6zm10-10h6v6h-6V4zm0 10h6v6h-6v-6z',
-  // Lock open
-  deident_int:      'M11 11V7a4 4 0 0 1 8 0v4M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z',
-  // Users
-  cohorts:          'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8A4 4 0 0 0 9 7zm14 14v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-  // Globe
-  ext_hub:          'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
-  // Lock closed
-  deident_ext:      'M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4',
-  // Graduation cap
-  academic:         'M12 14l9-5-9-5-9 5 9 5zm0 0v6m-4-2.5s0 2.5 4 2.5 4-2.5 4-2.5',
-  // Handshake / briefcase
-  industry:         'M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2',
-  // Search / telescope
-  self_ext:         'M11 3a8 8 0 1 0 0 16A8 8 0 0 0 11 3zm10 18-4.35-4.35',
+// ═══════════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════════
+const PHASES = {
+  source:  { label:'Operational & Source Systems',         color:'#6366f1' },
+  int:     { label:'Internal Research Environment',        color:'#0ea5e9' },
+  ext:     { label:'External Collaborative Research',      color:'#8b5cf6' },
+  deident: { label:'De-Identified (PHI-Free) Environment', color:'#f59e0b' },
+  self:    { label:'Self-Service Analytics',               color:'#14b8a6' },
+};
+const PH = PHASES; // alias for short references
 };
 
 const nodes = [
-  // ── PHASE 1: OPERATIONAL & SOURCE ────────────────────────────────────────
   {
-    id:'ehr', label:'EHR System', sublabel:'Electronic Health Record',
-    phase:'source', category:'Source System', r:30,
+    id:'ehr', label:'EHR System', sub:'Electronic Health Record',
+    phase:'source', cat:'Source System', r:30,
     std:'HL7 FHIR R4 · HL7 v2 · C-CDA',
-    desc:'The primary Electronic Health Record system deployed across the health system. Captures structured and unstructured clinical data including encounters, problem lists, medications, laboratory results, vital signs, imaging orders, and clinical notes.',
-    tags:['EHR','HL7 FHIR','Clinical Data','Structured','Unstructured'],
-    x0:0.12, y0:0.5,
+    desc:'The primary Electronic Health Record system. Captures encounters, problem lists, medications, laboratory results, vital signs, imaging orders, and clinical notes in structured and unstructured form.',
+    tags:['EHR','HL7 FHIR','Clinical','Structured','Unstructured'],
+    x0:0.12, y0:0.50,
   },
   {
-    id:'opsdw', label:'Operational Data Warehouse', sublabel:'Relational + Dimensional Store',
-    phase:'source', category:'Operational Analytics Store', r:26,
-    std:'SQL Relational Model · Star Schema · Kimball Methodology',
-    desc:'A dual-layer operational analytics foundation. The relational layer mirrors the EHR transactional schema for ad-hoc SQL queries. The dimensional layer applies a star-schema model optimized for structured reporting, dashboards, and operational KPIs.',
-    tags:['SQL','Star Schema','Dimensional','Operational','Kimball'],
-    x0:0.21, y0:0.5,
+    id:'opsdw', label:'Operational Data Warehouse', sub:'Relational + Dimensional Store',
+    phase:'source', cat:'Operational Analytics Store', r:26,
+    std:'Star Schema · Kimball · SQL Relational',
+    desc:'Dual-layer operational analytics: relational layer for ad-hoc SQL and a dimensional star-schema layer for dashboards, KPIs, and structured reporting. Primary extraction point for downstream environments.',
+    tags:['SQL','Star Schema','Dimensional','Kimball'],
+    x0:0.21, y0:0.50,
   },
   {
-    id:'research_capture', label:'Research Data Capture', sublabel:'Non-EHR Study Instruments',
-    phase:'source', category:'External Data Input', r:20,
-    std:'REDCap · CDISC ODM · HL7 FHIR Questionnaire',
-    desc:'Structured research data collection instruments used alongside the EHR. Supports clinical study forms, patient-reported outcomes (PROs), registry intake, and public health surveillance feeds.',
-    tags:['PROs','Surveys','Registry','CDISC','Research'],
-    x0:0.09, y0:0.26,
+    id:'research_capture', label:'Research Data Capture', sub:'Non-EHR Study Instruments',
+    phase:'source', cat:'External Data Input', r:20,
+    std:'REDCap · CDISC ODM · FHIR Questionnaire',
+    desc:'Structured research instruments used alongside the EHR — study forms, patient-reported outcomes (PROs), registries, and public health surveillance feeds ingested in standard interoperability formats.',
+    tags:['PROs','Surveys','Registry','CDISC'],
+    x0:0.09, y0:0.27,
   },
   {
-    id:'claims', label:'Claims & Payer Data', sublabel:'Administrative Claims Feeds',
-    phase:'source', category:'Administrative Data', r:21,
-    std:'X12 EDI 837/835 · CMS CCLF · NCPDP SCRIPT',
-    desc:'Adjudicated administrative claims from commercial payers, government programs (Medicare/Medicaid), and pharmacy benefit managers. Captures healthcare utilization, procedure codes, diagnosis codes, and costs.',
-    tags:['Claims','ICD-10','CPT','Medicare','Commercial'],
-    x0:0.09, y0:0.74,
+    id:'claims', label:'Claims & Payer Data', sub:'Administrative Claims Feeds',
+    phase:'source', cat:'Administrative Data', r:21,
+    std:'X12 EDI 837/835 · CMS CCLF · NCPDP',
+    desc:'Adjudicated administrative claims from commercial payers, Medicare, Medicaid, and pharmacy benefit managers. Captures utilization, CPT/ICD codes, and costs for episodes occurring outside the health system.',
+    tags:['Claims','ICD-10','CPT','Medicare','Payer'],
+    x0:0.09, y0:0.73,
   },
   {
-    id:'op_analytics', label:'Operational Self-Service', sublabel:'Ad-Hoc Analytics Tool',
-    phase:'self', category:'Self-Service Analytics', r:18,
-    std:'Vendor-Native Reporting · SMART on FHIR Apps',
-    desc:'An embedded, no-code analytics environment fed directly from the Operational Data Warehouse. Enables clinical and operational staff to perform ad-hoc cohort queries and build reports without IT intermediation.',
-    tags:['No-Code','Operational','Self-Service','RBAC'],
-    x0:0.24, y0:0.26,
-  },
-
-  // ── PHASE 2: INTERNAL RESEARCH ─────────────────────────────────────────
-  {
-    id:'int_cdw', label:'Integrated Research Warehouse', sublabel:'EHR + Claims Fusion Layer',
-    phase:'int', category:'Centralized Data Warehouse', r:28,
-    std:'ISO/IEC 25012 Data Quality · FAIR Data Principles',
-    desc:'A centralized, governed data warehouse that integrates clinical EHR data with administrative claims data under unified patient-matching logic (Master Patient Index). Applies data quality checks and terminology normalization.',
-    tags:['CDW','EHR+Claims','MPI','LOINC','SNOMED CT','RxNorm'],
-    x0:0.39, y0:0.5,
+    id:'op_analytics', label:'Operational Self-Service', sub:'Ad-Hoc Analytics Tool',
+    phase:'self', cat:'Self-Service Analytics', r:18,
+    std:'Vendor-Native Reporting · SMART on FHIR',
+    desc:'Embedded no-code analytics environment fed from the Operational DW. Allows clinical and operational staff to run ad-hoc queries without IT intermediation, under role-based access controls.',
+    tags:['No-Code','Self-Service','RBAC','Operational'],
+    x0:0.24, y0:0.27,
   },
   {
-    id:'cdm', label:'Common Data Model', sublabel:'OMOP · PCORNet · i2b2',
-    phase:'int', category:'Standardized Research Schema', r:26,
+    id:'int_cdw', label:'Integrated Research Warehouse', sub:'EHR + Claims Fusion Layer',
+    phase:'int', cat:'Centralized Data Warehouse', r:28,
+    std:'ISO/IEC 25012 · FAIR Data Principles',
+    desc:'Centralized governed warehouse integrating EHR and claims data under a unified Master Patient Index. Applies data quality checks, terminology normalization (LOINC, SNOMED, RxNorm), and de-duplication.',
+    tags:['CDW','MPI','LOINC','SNOMED CT','RxNorm'],
+    x0:0.39, y0:0.50,
+  },
+  {
+    id:'cdm', label:'Common Data Model', sub:'OMOP · PCORNet · i2b2',
+    phase:'int', cat:'Standardized Research Schema', r:26,
     std:'OMOP CDM v5.4 · PCORNet CDM v6.1 · i2b2 · CDISC SDTM',
-    desc:'Identified patient-level data structured into one or more standardized Common Data Models. Enables federated query execution across partner sites without sharing underlying data. Supports harmonized concept mapping via OHDSI vocabulary.',
-    tags:['OMOP','PCORNet','i2b2','OHDSI','Federated','Identified'],
+    desc:'Identified patient-level data structured into standardized Common Data Models. Enables federated query execution across partner sites. Supports harmonized concept mapping via OHDSI vocabulary and PCORNet terminology.',
+    tags:['OMOP','PCORNet','i2b2','OHDSI','Federated'],
     x0:0.47, y0:0.34,
   },
   {
-    id:'deident_int', label:'De-Identified Research Dataset', sublabel:'PHI-Free Extract · Internal',
-    phase:'deident', category:'De-Identified Research', r:23,
-    std:'HIPAA Safe Harbor (45 CFR §164.514(b)) · Expert Determination · NIST SP 800-188',
-    desc:'A legally de-identified extract derived from the institutional Common Data Model. PHI is removed or transformed using HIPAA Safe Harbor (18 identifiers) or Expert Determination methods.',
-    tags:['HIPAA','Safe Harbor','Expert Determination','De-ID','IRB-Exempt'],
+    id:'deident_int', label:'De-Identified Dataset', sub:'PHI-Free Extract · Internal',
+    phase:'deident', cat:'De-Identified Research', r:23,
+    std:'HIPAA Safe Harbor 45 CFR §164.514(b) · Expert Determination · NIST SP 800-188',
+    desc:'Legally de-identified extract from the institutional CDM. PHI removed via HIPAA Safe Harbor (18 identifiers) or Expert Determination. Supports hypothesis generation and feasibility analysis without full IRB authorization.',
+    tags:['HIPAA','Safe Harbor','Expert Determination','De-ID'],
     x0:0.47, y0:0.64,
   },
   {
-    id:'cohorts', label:'Priority Population Cohorts', sublabel:'Limited Datasets · Defined Populations',
-    phase:'int', category:'Curated Cohort', r:20,
+    id:'cohorts', label:'Priority Population Cohorts', sub:'Limited Datasets · Defined Populations',
+    phase:'int', cat:'Curated Research Cohort', r:20,
     std:'NIH Inclusion Policy · Limited Dataset DUA · 45 CFR §164.514(e)',
-    desc:'Curated, limited datasets scoped to defined disease or demographic cohorts. Governed under Data Use Agreements (DUAs) restricting use to specified research purposes and prohibiting re-identification.',
+    desc:'Limited datasets scoped to disease or demographic cohorts of research priority. Governed under Data Use Agreements restricting use to specified purposes and prohibiting re-identification.',
     tags:['Limited Dataset','DUA','Cohort','Health Equity'],
     x0:0.39, y0:0.76,
   },
-
-  // ── PHASE 3: EXTERNAL COLLABORATIVE ──────────────────────────────────
   {
-    id:'ext_hub', label:'Regional / National Data Hub', sublabel:'Multi-Site CDM Federation',
-    phase:'ext', category:'Multi-Site Research Hub', r:28,
-    std:'PCORNet · OHDSI · NIH N3C · TriNetX Network',
-    desc:'A federated data hub aggregating standardized Common Data Model instances from multiple participating health systems. Enables distributed analytics without centralizing patient-level data at a single site.',
-    tags:['PCORNet','OHDSI','N3C','Federated','Multi-Site','RWE'],
-    x0:0.71, y0:0.4,
+    id:'ext_hub', label:'Regional / National Data Hub', sub:'Multi-Site CDM Federation',
+    phase:'ext', cat:'Multi-Site Research Hub', r:28,
+    std:'PCORNet · OHDSI · NIH N3C · TriNetX',
+    desc:'Federated hub aggregating standardized CDM instances from multiple participating health systems. Enables distributed analytics without centralizing patient-level data — supporting comparative effectiveness and real-world evidence studies.',
+    tags:['PCORNet','OHDSI','N3C','Federated','RWE'],
+    x0:0.71, y0:0.40,
   },
   {
-    id:'deident_ext', label:'Multi-Site De-Identified Pool', sublabel:'PHI-Free · Federated Extract',
-    phase:'deident', category:'De-Identified Research', r:22,
+    id:'deident_ext', label:'Multi-Site De-Identified Pool', sub:'PHI-Free · Federated Extract',
+    phase:'deident', cat:'De-Identified Research', r:22,
     std:'HIPAA Expert Determination · NIH Certificate of Confidentiality',
-    desc:'Aggregated, de-identified datasets contributed by multiple participating institutions through the regional or national data hub. Enables population-level analyses at a scale not achievable by a single site.',
-    tags:['De-ID','Multi-Site','Epidemiology','Population-Level'],
+    desc:'Aggregated de-identified datasets contributed by multiple institutions through the regional hub. Enables population-level epidemiological analyses and outcomes research at a scale not achievable by a single site.',
+    tags:['De-ID','Multi-Site','Epidemiology','Population'],
     x0:0.71, y0:0.65,
   },
   {
-    id:'academic', label:'Academic Research Consortia', sublabel:'University & Medical School Partners',
-    phase:'ext', category:'Academic Partner', r:18,
-    std:'NIH / AHRQ Grant Agreements · IRB Authorization Agreements · MOU',
-    desc:'Research collaborations with academic medical centers, schools of public health, and universities. Partners access harmonized CDM data through the regional hub under signed IRB Authorization Agreements.',
-    tags:['Academic Medical Center','NIH','IRB','MOU'],
+    id:'academic', label:'Academic Research Consortia', sub:'University & Medical School Partners',
+    phase:'ext', cat:'Academic Partner', r:18,
+    std:'NIH / AHRQ Grants · IRB Authorization Agreements · MOU',
+    desc:'Collaborations with academic medical centers and schools of public health. Partners access harmonized CDM data through the regional hub under signed IRB Authorization Agreements and Data Use Agreements.',
+    tags:['Academic','NIH','IRB','MOU','Medical School'],
     x0:0.86, y0:0.27,
   },
   {
-    id:'industry', label:'Clinical Trial & Industry Partners', sublabel:'Pharma · CRO · Device Manufacturers',
-    phase:'ext', category:'Industry Collaboration', r:17,
+    id:'industry', label:'Industry Partners', sub:'Pharma · CRO · Device Manufacturers',
+    phase:'ext', cat:'Industry Collaboration', r:17,
     std:'ICH E6 GCP · FDA 21 CFR Part 11 · BAA / DUA',
-    desc:'Collaborations with pharmaceutical companies, contract research organizations (CROs), and medical device manufacturers using de-identified real-world data for regulatory submissions and post-market surveillance.',
+    desc:'Pharmaceutical companies, CROs, and device manufacturers using de-identified real-world data for regulatory submissions and post-market surveillance. All governed by Business Associate Agreements and IRB-approved protocols.',
     tags:['Pharma','CRO','FDA','GCP','BAA','RWE'],
-    x0:0.86, y0:0.5,
+    x0:0.86, y0:0.50,
   },
   {
-    id:'self_ext', label:'Multi-Site Query Platform', sublabel:'Federated Self-Service Feasibility',
-    phase:'self', category:'Self-Service Analytics', r:22,
-    std:'TriNetX · OHDSI Atlas · PCORNet PopMedNet · i2b2 Web Client',
-    desc:'Federated self-service platforms enabling multi-site cohort discovery and feasibility queries across the network. Aggregate-count queries only — no row-level data returned.',
-    tags:['TriNetX','Atlas','PopMedNet','Aggregate','Feasibility'],
+    id:'self_ext', label:'Multi-Site Query Platform', sub:'Federated Self-Service Feasibility',
+    phase:'self', cat:'Self-Service Analytics', r:22,
+    std:'TriNetX · OHDSI Atlas · PCORNet PopMedNet · i2b2',
+    desc:'Federated platforms enabling multi-site cohort discovery and feasibility queries. Researchers submit aggregate-count queries — no row-level data returned — to assess study feasibility and estimate sample sizes.',
+    tags:['TriNetX','Atlas','PopMedNet','Feasibility','Aggregate'],
     x0:0.86, y0:0.73,
   },
 ];
 
 const links = [
-  { source:'ehr',              target:'opsdw',       type:'primary'   },
-  { source:'research_capture', target:'opsdw',       type:'secondary' },
-  { source:'claims',           target:'opsdw',       type:'secondary' },
-  { source:'opsdw',            target:'op_analytics',type:'self'      },
-  { source:'opsdw',            target:'int_cdw',     type:'primary'   },
-  { source:'claims',           target:'int_cdw',     type:'secondary' },
-  { source:'int_cdw',          target:'cdm',         type:'primary'   },
-  { source:'cdm',              target:'deident_int', type:'deident'   },
-  { source:'int_cdw',          target:'cohorts',     type:'cohort'    },
-  { source:'cdm',              target:'ext_hub',     type:'primary'   },
-  { source:'ext_hub',          target:'deident_ext', type:'deident'   },
-  { source:'ext_hub',          target:'academic',    type:'collab'    },
-  { source:'ext_hub',          target:'industry',    type:'collab'    },
-  { source:'deident_ext',      target:'self_ext',    type:'self'      },
-  { source:'deident_int',      target:'self_ext',    type:'self'      },
+  {s:'ehr',          t:'opsdw',       k:'primary'  },
+  {s:'research_capture',t:'opsdw',    k:'secondary'},
+  {s:'claims',       t:'opsdw',       k:'secondary'},
+  {s:'opsdw',        t:'op_analytics',k:'self'     },
+  {s:'opsdw',        t:'int_cdw',     k:'primary'  },
+  {s:'claims',       t:'int_cdw',     k:'secondary'},
+  {s:'int_cdw',      t:'cdm',         k:'primary'  },
+  {s:'cdm',          t:'deident_int', k:'deident'  },
+  {s:'int_cdw',      t:'cohorts',     k:'cohort'   },
+  {s:'cdm',          t:'ext_hub',     k:'primary'  },
+  {s:'ext_hub',      t:'deident_ext', k:'deident'  },
+  {s:'ext_hub',      t:'academic',    k:'collab'   },
+  {s:'ext_hub',      t:'industry',    k:'collab'   },
+  {s:'deident_ext',  t:'self_ext',    k:'self'     },
+  {s:'deident_int',  t:'self_ext',    k:'self'     },
 ];
 
-const LINK_STYLES = {
-  primary:   { color:'#818cf8', dash:'none'  },
-  secondary: { color:'#6b7a99', dash:'5,4'   },
-  deident:   { color:'#f59e0b', dash:'none'  },
-  self:      { color:'#14b8a6', dash:'7,4'   },
-  cohort:    { color:'#34d399', dash:'3,5'   },
-  collab:    { color:'#a78bfa', dash:'none'  },
+const LS = {
+  primary:  {c:'#818cf8', d:null   },
+  secondary:{c:'#4e5a72', d:'5,4'  },
+  deident:  {c:'#f59e0b', d:null   },
+  self:     {c:'#14b8a6', d:'6,4'  },
+  cohort:   {c:'#34d399', d:'3,5'  },
+  collab:   {c:'#a78bfa', d:null   },
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// GRAPH ENGINE
-// ═══════════════════════════════════════════════════════════════════════════════
-const svg      = d3.select('#graph');
-const wrap     = document.getElementById('canvas-wrap');
-const tooltip  = document.getElementById('tooltip');
-let W, H, showLabels=true, flowActive=true, selectedNode=null, flowId=null;
+// ═══════════════════════════════════════════════════════════════════════
+// ENGINE
+// ═══════════════════════════════════════════════════════════════════════
+const svg   = d3.select('#g');
+const wrap  = document.getElementById('wrap');
+const tip   = document.getElementById('tip');
+let W, H, showLbl=true, flowOn=true, selNode=null, flowTick=null;
 
-function resize() {
-  W = wrap.clientWidth;
-  H = wrap.clientHeight;
-  svg.attr('width', W).attr('height', H);
+function resize(){
+  W=wrap.clientWidth; H=wrap.clientHeight;
+  svg.attr('width',W).attr('height',H);
 }
 resize();
-
-window.addEventListener('resize', () => {
-  resize();
-  positionNodes();
-  nodeEls.attr('transform', d => `translate(${d.x},${d.y})`);
-  updateForeignObjects();
-  linkSel.attr('d', linkPath);
-  drawLanes();
-  fitView();
+window.addEventListener('resize',()=>{
+  resize(); posNodes();
+  nodeEls.attr('transform',d=>`translate(${d.x},${d.y})`);
+  repositionFO();
+  linkSel.attr('d',lpath);
+  drawLanes(); fitView();
 });
 
-// ── Defs ────────────────────────────────────────────────────────────────────
+// ── Defs ─────────────────────────────────────────────────────────────
 const defs = svg.append('defs');
-
-Object.entries(LINK_STYLES).forEach(([type, s]) => {
-  defs.append('marker')
-    .attr('id', `arr-${type}`)
-    .attr('markerWidth', 8).attr('markerHeight', 8)
-    .attr('refX', 6).attr('refY', 3).attr('orient', 'auto')
-    .append('path').attr('d', 'M0,0 L0,6 L8,3 z')
-    .attr('fill', s.color).attr('opacity', 0.8);
+Object.entries(LS).forEach(([k,s])=>{
+  defs.append('marker').attr('id',`ar-${k}`)
+    .attr('markerWidth',7).attr('markerHeight',7)
+    .attr('refX',5.5).attr('refY',3).attr('orient','auto')
+    .append('path').attr('d','M0,0 L0,6 L7,3 z')
+    .attr('fill',s.c).attr('opacity',0.78);
 });
 
-const glowF = defs.append('filter').attr('id','glow').attr('x','-40%').attr('y','-40%').attr('width','180%').attr('height','180%');
-glowF.append('feGaussianBlur').attr('stdDeviation','4').attr('result','blur');
-const feMrg = glowF.append('feMerge');
-feMrg.append('feMergeNode').attr('in','blur');
-feMrg.append('feMergeNode').attr('in','SourceGraphic');
+// Glow filter
+const gf=defs.append('filter').attr('id','glow').attr('x','-50%').attr('y','-50%').attr('width','200%').attr('height','200%');
+gf.append('feGaussianBlur').attr('stdDeviation','5').attr('result','b');
+const fm=gf.append('feMerge');
+fm.append('feMergeNode').attr('in','b');
+fm.append('feMergeNode').attr('in','SourceGraphic');
 
-// ── Zoom ─────────────────────────────────────────────────────────────────────
-const zoom = d3.zoom().scaleExtent([0.15, 3.5]).on('zoom', e => container.attr('transform', e.transform));
+// Inner glow
+const ig=defs.append('filter').attr('id','iglow').attr('x','-30%').attr('y','-30%').attr('width','160%').attr('height','160%');
+ig.append('feGaussianBlur').attr('stdDeviation','2.5').attr('result','b');
+const im=ig.append('feMerge');
+im.append('feMergeNode').attr('in','b');
+im.append('feMergeNode').attr('in','SourceGraphic');
+
+// ── Zoom ──────────────────────────────────────────────────────────────
+const zoom=d3.zoom().scaleExtent([0.15,4]).on('zoom',e=>ct.attr('transform',e.transform));
 svg.call(zoom);
 
-const container = svg.append('g');
-const laneGroup  = container.append('g');
-const linkGroup  = container.append('g');
-const nodeGroup  = container.append('g');
-const partGroup  = container.append('g');
+const ct       = svg.append('g');
+const laneG    = ct.append('g');
+const linkG    = ct.append('g');
+const nodeG    = ct.append('g');
+const partG    = ct.append('g');
 
-function fitView(pad=80) {
-  const b = container.node().getBBox();
-  if (!b.width || !b.height) return;
-  const sx = (W-pad*2)/b.width, sy = (H-pad*2)/b.height, sc = Math.min(sx, sy, 1.1);
-  svg.transition().duration(700).call(
-    zoom.transform,
+function fitView(p=72){
+  const b=ct.node().getBBox();
+  if(!b.width||!b.height) return;
+  const sx=(W-p*2)/b.width, sy=(H-p*2)/b.height, sc=Math.min(sx,sy,1.15);
+  svg.transition().duration(680).call(zoom.transform,
     d3.zoomIdentity
-      .translate((W - b.width*sc)/2 - b.x*sc, (H - b.height*sc)/2 - b.y*sc)
-      .scale(sc)
-  );
+      .translate((W-b.width*sc)/2-b.x*sc,(H-b.height*sc)/2-b.y*sc)
+      .scale(sc));
 }
 
-// ── Layout ───────────────────────────────────────────────────────────────────
-const MAR = { top:70, bot:62, left:48, right:48 };
-
-function positionNodes() {
-  nodes.forEach(n => {
-    n.x = MAR.left + n.x0 * (W - MAR.left - MAR.right);
-    n.y = MAR.top  + n.y0 * (H - MAR.top  - MAR.bot);
+// ── Layout ────────────────────────────────────────────────────────────
+const M={t:72,b:60,l:50,r:50};
+function posNodes(){
+  nodes.forEach(n=>{
+    n.x=M.l+n.x0*(W-M.l-M.r);
+    n.y=M.t+n.y0*(H-M.t-M.b);
   });
 }
-positionNodes();
+posNodes();
 
-// ── Lane backgrounds ─────────────────────────────────────────────────────────
-const LANE_DEFS = [
-  { label:'OPERATIONAL & SOURCE SYSTEMS',  num:'01', x:0.01, w:0.30, fill:'rgba(99,102,241,0.04)',  stroke:'rgba(99,102,241,0.13)' },
-  { label:'INTERNAL RESEARCH ENVIRONMENT', num:'02', x:0.33, w:0.25, fill:'rgba(14,165,233,0.04)',  stroke:'rgba(14,165,233,0.13)' },
-  { label:'EXTERNAL COLLABORATIVE',        num:'03', x:0.60, w:0.39, fill:'rgba(139,92,246,0.04)',  stroke:'rgba(139,92,246,0.13)' },
+// ── Lane backgrounds ─────────────────────────────────────────────────
+const LANES=[
+  {lbl:'OPERATIONAL & SOURCE',  n:'01', x:0.01, w:0.295, fc:'rgba(99,102,241,0.038)',  sc:'rgba(99,102,241,0.16)'},
+  {lbl:'INTERNAL RESEARCH',     n:'02', x:0.32, w:0.245, fc:'rgba(14,165,233,0.038)',  sc:'rgba(14,165,233,0.16)'},
+  {lbl:'EXTERNAL COLLABORATIVE',n:'03', x:0.58, w:0.41,  fc:'rgba(139,92,246,0.038)', sc:'rgba(139,92,246,0.16)'},
 ];
 
-function drawLanes() {
-  laneGroup.selectAll('*').remove();
-  const lw = W - MAR.left - MAR.right;
-  const lh = H - MAR.top  - MAR.bot;
-  LANE_DEFS.forEach(l => {
-    const lx = MAR.left + l.x*lw;
-    const ly = MAR.top - 28;
-    const lW = l.w * lw;
-    const lH = lh + 50;
+function drawLanes(){
+  laneG.selectAll('*').remove();
+  const lw=W-M.l-M.r, lh=H-M.t-M.b;
+  LANES.forEach(l=>{
+    const lx=M.l+l.x*lw, ly=M.t-30, lW=l.w*lw, lH=lh+54;
 
-    laneGroup.append('rect')
-      .attr('x', lx).attr('y', ly).attr('width', lW).attr('height', lH)
-      .attr('rx', 16).attr('fill', l.fill)
-      .attr('stroke', l.stroke).attr('stroke-width', 1);
+    // Background rect
+    laneG.append('rect')
+      .attr('x',lx).attr('y',ly).attr('width',lW).attr('height',lH)
+      .attr('rx',14).attr('fill',l.fc)
+      .attr('stroke',l.sc).attr('stroke-width',1);
 
-    // number chip
-    const chipW = 22, chipH = 16, chipX = lx + 12, chipY = ly + 10;
-    laneGroup.append('rect')
-      .attr('x', chipX).attr('y', chipY).attr('width', chipW).attr('height', chipH)
-      .attr('rx', 4).attr('fill', l.stroke);
-    laneGroup.append('text')
-      .attr('x', chipX + chipW/2).attr('y', chipY + chipH/2)
+    // Number chip
+    const cx=lx+14, cy=ly+13;
+    laneG.append('rect')
+      .attr('x',cx).attr('y',cy).attr('width',20).attr('height',13)
+      .attr('rx',3.5).attr('fill',l.sc);
+    laneG.append('text')
+      .attr('x',cx+10).attr('y',cy+6.5)
       .attr('dominant-baseline','central').attr('text-anchor','middle')
-      .attr('font-family','Inter,sans-serif').attr('font-size','8px').attr('font-weight','700')
-      .attr('fill','rgba(255,255,255,0.85)').text(l.num);
+      .attr('fill','rgba(255,255,255,0.9)')
+      .attr('font-family','JetBrains Mono,monospace')
+      .attr('font-size','7.5px').attr('font-weight','700')
+      .text(l.n);
 
-    // label text — clipped to lane width
-    laneGroup.append('text')
-      .attr('x', chipX + chipW + 8).attr('y', chipY + chipH/2)
+    // Label
+    laneG.append('text')
+      .attr('x',cx+26).attr('y',cy+6.5)
       .attr('dominant-baseline','central')
-      .attr('class','lane-label').attr('fill', l.stroke)
-      .attr('text-anchor','start')
-      .text(l.label);
+      .attr('class','lane-label').attr('fill',l.sc)
+      .text(l.lbl);
   });
 }
 drawLanes();
 
-// ── Node map ─────────────────────────────────────────────────────────────────
-const nodeById = {};
-nodes.forEach(n => nodeById[n.id] = n);
+// ── Node map ──────────────────────────────────────────────────────────
+const byId={};
+nodes.forEach(n=>byId[n.id]=n);
 
-// ── Links ─────────────────────────────────────────────────────────────────────
-function buildLinks() {
-  linkGroup.selectAll('*').remove();
-  return linkGroup.selectAll('.link').data(links).join('path')
-    .attr('class', d => `link link-${d.source} link-${d.target}`)
-    .attr('id', (d,i) => `lp-${i}`)
-    .attr('stroke', d => LINK_STYLES[d.type].color)
-    .attr('stroke-dasharray', d => LINK_STYLES[d.type].dash === 'none' ? null : LINK_STYLES[d.type].dash)
-    .attr('marker-end', d => `url(#arr-${d.type})`)
-    .attr('d', linkPath);
+// ── Links ─────────────────────────────────────────────────────────────
+function buildLinks(){
+  linkG.selectAll('*').remove();
+  return linkG.selectAll('.lnk').data(links).join('path')
+    .attr('class',d=>`link lnk-${d.s} lnk-${d.t}`)
+    .attr('id',(_,i)=>`lp${i}`)
+    .attr('stroke',d=>LS[d.k].c)
+    .attr('stroke-dasharray',d=>LS[d.k].d||null)
+    .attr('marker-end',d=>`url(#ar-${d.k})`)
+    .attr('d',lpath);
 }
-
-function linkPath(d) {
-  const s = nodeById[d.source], t = nodeById[d.target];
-  if (!s || !t) return '';
-  const dx = t.x-s.x, dy = t.y-s.y, len = Math.sqrt(dx*dx+dy*dy) || 1;
-  const nx = -dy/len, ny = dx/len, cv = Math.min(len*0.22, 65);
-  const cx = (s.x+t.x)/2 + nx*cv, cy = (s.y+t.y)/2 + ny*cv;
-  const sr = (s.r||20)+3, tr = (t.r||20)+9;
-  const sx = s.x+(cx-s.x)/len*sr, sy = s.y+(cy-s.y)/len*sr;
-  const edx = t.x-cx, edy = t.y-cy, el = Math.sqrt(edx*edx+edy*edy) || 1;
-  return `M${sx},${sy} Q${cx},${cy} ${t.x-edx/el*tr},${t.y-edy/el*tr}`;
+function lpath(d){
+  const s=byId[d.s],t=byId[d.t]; if(!s||!t) return '';
+  const dx=t.x-s.x,dy=t.y-s.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len,ny=dx/len,cv=Math.min(len*.22,60);
+  const cx=(s.x+t.x)/2+nx*cv,cy=(s.y+t.y)/2+ny*cv;
+  const sr=(s.r||20)+3,tr=(t.r||20)+9;
+  const sx=s.x+(cx-s.x)/len*sr,sy=s.y+(cy-s.y)/len*sr;
+  const ex=t.x-cx,ey=t.y-cy,el=Math.sqrt(ex*ex+ey*ey)||1;
+  return `M${sx},${sy} Q${cx},${cy} ${t.x-ex/el*tr},${t.y-ey/el*tr}`;
 }
+let linkSel=buildLinks();
 
-let linkSel = buildLinks();
-
-// ── Nodes ─────────────────────────────────────────────────────────────────────
-const nodeEls = nodeGroup.selectAll('.node-group').data(nodes).join('g')
-  .attr('class', 'node-group')
-  .attr('id', d => `node-${d.id}`)
-  .attr('transform', d => `translate(${d.x},${d.y})`)
+// ── Nodes ─────────────────────────────────────────────────────────────
+const nodeEls=nodeG.selectAll('.node-g').data(nodes).join('g')
+  .attr('class','node-g')
+  .attr('id',d=>`nd-${d.id}`)
+  .attr('transform',d=>`translate(${d.x},${d.y})`)
   .call(d3.drag()
-    .on('start', function() { d3.select(this).raise(); })
-    .on('drag', function(e, d) {
-      d.x = e.x; d.y = e.y;
-      d3.select(this).attr('transform', `translate(${d.x},${d.y})`);
-      linkSel.attr('d', linkPath);
-      // reposition foreignObject
-      d3.select(this).select('.node-fo')
-        .attr('x', -(d.r + 52))
-        .attr('y', d.r + 8);
-    })
-  )
-  .on('click', (e,d) => { e.stopPropagation(); selectNode(d); })
-  .on('mouseenter', (e,d) => showTip(e,d))
-  .on('mouseleave', () => hideTip());
+    .on('start',function(){d3.select(this).raise();})
+    .on('drag',function(e,d){
+      d.x=e.x;d.y=e.y;
+      d3.select(this).attr('transform',`translate(${d.x},${d.y})`);
+      linkSel.attr('d',lpath);
+      d3.select(this).select('.lbl-fo')
+        .attr('x',d=>-(d.r+LBL_HALF))
+        .attr('y',d=>d.r+LBL_GAP);
+    }))
+  .on('click',(e,d)=>{e.stopPropagation();selectNode(d);})
+  .on('mouseenter',(e,d)=>showTip(e,d))
+  .on('mouseleave',()=>hideTip());
 
-// pulse ring
-nodeEls.append('circle').attr('class','pulse-ring')
-  .attr('r', d => d.r+4).attr('fill','none')
-  .attr('stroke', d => PHASES[d.phase].color).attr('stroke-width',1.5)
-  .attr('opacity',0).attr('id', d => `pulse-${d.id}`);
+// Pulse ring (animation)
+nodeEls.append('circle').attr('class','pring')
+  .attr('r',0).attr('fill','none')
+  .attr('stroke',d=>PH[d.phase].color).attr('stroke-width',1.2)
+  .attr('opacity',0).attr('id',d=>`pr-${d.id}`);
 
-// glow halo
+// Outer glow halo
 nodeEls.append('circle')
-  .attr('r', d => d.r+14)
-  .attr('fill', d => PHASES[d.phase].color)
-  .attr('opacity', 0.05).attr('filter','url(#glow)');
+  .attr('r',d=>d.r+16)
+  .attr('fill',d=>PH[d.phase].color)
+  .attr('opacity',0.04)
+  .attr('filter','url(#glow)');
 
-// main circle
-nodeEls.append('circle').attr('class','node-circle')
-  .attr('r', d => d.r)
-  .attr('fill', d => `${PHASES[d.phase].color}1a`)
-  .attr('stroke', d => PHASES[d.phase].color)
-  .attr('stroke-width', 2);
+// Main filled circle (very subtle)
+nodeEls.append('circle')
+  .attr('r',d=>d.r)
+  .attr('fill',d=>`${PH[d.phase].color}14`)
+  .attr('stroke','none');
 
-// SVG icon — rendered as a <path> inside the circle
-nodeEls.append('path')
-  .attr('d', d => ICONS[d.id] || ICONS['ext_hub'])
-  .attr('fill', 'none')
-  .attr('stroke', d => PHASES[d.phase].color)
-  .attr('stroke-width', 1.5)
-  .attr('stroke-linecap', 'round')
-  .attr('stroke-linejoin', 'round')
-  .attr('opacity', 0.85)
-  .attr('transform', d => {
-    // Scale icon (24x24 viewBox) to fit inside circle
-    const s = (d.r * 0.9) / 12;
-    return `translate(-${12*s},-${12*s}) scale(${s})`;
-  });
+// Ring — outer
+nodeEls.append('circle').attr('class','node-ring')
+  .attr('r',d=>d.r)
+  .attr('fill','none')
+  .attr('stroke',d=>PH[d.phase].color)
+  .attr('stroke-width',2)
+  .attr('filter','url(#iglow)');
 
-// Label — foreignObject for proper text wrapping
-function labelWidth(r) { return (r + 52) * 2; }
+// Ring — inner subtle concentric
+nodeEls.append('circle')
+  .attr('r',d=>d.r-5)
+  .attr('fill','none')
+  .attr('stroke',d=>PH[d.phase].color)
+  .attr('stroke-width',0.4)
+  .attr('opacity',0.25);
+
+// Icon — custom geometric, scaled proportionally to radius
+nodeEls.append('g')
+  .attr('class','node-ic')
+  .attr('stroke',d=>PH[d.phase].color)
+  .attr('fill','none')
+  .attr('stroke-width','1.65')
+  .attr('stroke-linecap','round')
+  .attr('stroke-linejoin','round')
+  .attr('opacity','0.88')
+  .attr('transform',d=>`scale(${d.r/10})`)  // ±8 design → node radius
+  .each(function(d){ this.innerHTML = IC[d.id]||''; });
+
+// Label foreignObject
+const LBL_HALF = 72;   // half-width of label box
+const LBL_GAP  = 10;   // gap between circle bottom and label top
 
 nodeEls.append('foreignObject')
-  .attr('class', 'node-fo')
-  .attr('x', d => -(d.r + 52))
-  .attr('y', d => d.r + 8)
-  .attr('width', d => labelWidth(d.r))
-  .attr('height', 46)
-  .attr('display', showLabels ? 'block' : 'none')
-  .html(d => `
-    <div xmlns="http://www.w3.org/1999/xhtml" class="node-fo-inner">
-      <div class="node-fo-label">${d.label}</div>
-      <div class="node-fo-sub">${d.sublabel}</div>
-    </div>
-  `);
+  .attr('class','lbl-fo')
+  .attr('x',d=>-(d.r+LBL_HALF))
+  .attr('y',d=>d.r+LBL_GAP)
+  .attr('width',d=>(d.r+LBL_HALF)*2)
+  .attr('height',50)
+  .attr('display',showLbl?'block':'none')
+  .html(d=>`
+    <div xmlns="http://www.w3.org/1999/xhtml"
+         style="display:flex;justify-content:center;width:100%;">
+      <div class="lbl-wrap"
+           style="--accent-color:${PH[d.phase].color}55;">
+        <div class="lbl-main">${d.label}</div>
+        <div class="lbl-sub">${d.sub}</div>
+      </div>
+    </div>`);
 
-function updateForeignObjects() {
-  nodeEls.selectAll('.node-fo')
-    .attr('x', d => -(d.r + 52))
-    .attr('y', d => d.r + 8)
-    .attr('width', d => labelWidth(d.r));
+function repositionFO(){
+  nodeEls.selectAll('.lbl-fo')
+    .attr('x',d=>-(d.r+LBL_HALF))
+    .attr('y',d=>d.r+LBL_GAP)
+    .attr('width',d=>(d.r+LBL_HALF)*2);
 }
 
-// ── Tooltip ───────────────────────────────────────────────────────────────────
-function showTip(e, d) {
-  const [mx, my] = d3.pointer(e, wrap);
-  tooltip.style.opacity = '1';
-  tooltip.style.left = (mx + 16) + 'px';
-  tooltip.style.top  = (my - 12) + 'px';
-  tooltip.innerHTML = `<strong>${d.label}</strong> · <span style="color:#64748b">${d.category}</span>`;
+// ── Tooltip ───────────────────────────────────────────────────────────
+function showTip(e,d){
+  const[mx,my]=d3.pointer(e,wrap);
+  tip.style.opacity='1';
+  tip.style.left=(mx+14)+'px';
+  tip.style.top=(my-10)+'px';
+  tip.innerHTML=`<strong>${d.label}</strong><span style="color:#4e6275;margin-left:6px">${d.cat}</span>`;
 }
-function hideTip() { tooltip.style.opacity = '0'; }
+function hideTip(){ tip.style.opacity='0'; }
 
-// ── Selection ─────────────────────────────────────────────────────────────────
-function selectNode(d) {
-  if (selectedNode && selectedNode.id === d.id) { clearSel(); return; }
-  selectedNode = d;
-  updateSel();
-  updatePanel(d);
+// ── Selection ─────────────────────────────────────────────────────────
+function selectNode(d){
+  if(selNode&&selNode.id===d.id){clearSel();return;}
+  selNode=d; updateSel(); updatePanel(d);
 }
-
-function clearSel() {
-  selectedNode = null;
-  nodeEls.classed('selected dimmed', false);
-  linkSel.classed('highlighted dimmed', false);
-  d3.selectAll('.pulse-ring').attr('opacity', 0);
-  document.getElementById('info-panel').classList.add('hidden');
-  document.getElementById('stat-focus').textContent = '–';
+function clearSel(){
+  selNode=null;
+  nodeEls.classed('sel dim',false);
+  linkSel.classed('hi dim',false);
+  d3.selectAll('.pring').attr('opacity',0).attr('r',0);
+  document.getElementById('panel').classList.add('hide');
+  document.getElementById('sf').textContent='–';
 }
-
-function updateSel() {
-  if (!selectedNode) { clearSel(); return; }
-  const id = selectedNode.id;
-  const con = new Set([id]);
-  links.forEach(l => { if(l.source===id) con.add(l.target); if(l.target===id) con.add(l.source); });
-  nodeEls.classed('selected', n => n.id===id).classed('dimmed', n => !con.has(n.id));
-  linkSel
-    .classed('highlighted', l => l.source===id || l.target===id)
-    .classed('dimmed', l => l.source!==id && l.target!==id);
-  d3.selectAll('.pulse-ring').attr('opacity', 0);
-  d3.select(`#pulse-${id}`).attr('opacity', 0.7).attr('stroke', PHASES[selectedNode.phase].color);
-  document.getElementById('stat-focus').textContent = selectedNode.label.split(' ')[0];
+function updateSel(){
+  if(!selNode){clearSel();return;}
+  const id=selNode.id, con=new Set([id]);
+  links.forEach(l=>{if(l.s===id)con.add(l.t);if(l.t===id)con.add(l.s);});
+  nodeEls.classed('sel',n=>n.id===id).classed('dim',n=>!con.has(n.id));
+  linkSel.classed('hi',l=>l.s===id||l.t===id).classed('dim',l=>l.s!==id&&l.t!==id);
+  d3.selectAll('.pring').attr('opacity',0).attr('r',0);
+  d3.select(`#pr-${id}`).attr('opacity',0.6).attr('stroke',PH[selNode.phase].color);
+  document.getElementById('sf').textContent=selNode.label.split(' ')[0];
 }
-
-function updatePanel(d) {
-  document.getElementById('info-panel').classList.remove('hidden');
-  const ph = PHASES[d.phase];
-  document.getElementById('p-phase').textContent = ph.label;
-  document.getElementById('p-phase').style.color  = ph.color;
-  document.getElementById('p-title').textContent = d.label;
-  document.getElementById('p-cat').textContent   = d.category;
-  document.getElementById('p-std-text').textContent = d.std;
-  document.getElementById('p-desc').textContent  = d.desc;
-  document.getElementById('p-tags').innerHTML    = d.tags.map(t => `<span class="p-tag">${t}</span>`).join('');
-
-  const conEl = document.getElementById('p-conns');
-  let html = '';
-  links.filter(l => l.target===d.id).forEach(l => {
-    const s = nodeById[l.source];
-    html += `<div class="p-conn-item"><span class="p-conn-arr">→</span><span class="p-conn-name">${s.label}</span><span style="color:#2d3a4f;font-size:9.5px;margin-left:auto;font-family:JetBrains Mono,monospace">${l.type}</span></div>`;
-  });
-  links.filter(l => l.source===d.id).forEach(l => {
-    const t = nodeById[l.target];
-    html += `<div class="p-conn-item"><span class="p-conn-arr">←</span><span class="p-conn-name">${t.label}</span><span style="color:#2d3a4f;font-size:9.5px;margin-left:auto;font-family:JetBrains Mono,monospace">${l.type}</span></div>`;
-  });
-  conEl.innerHTML = html || '<div style="color:#2d3a4f;font-size:11px">No connections</div>';
+function updatePanel(d){
+  const el=document.getElementById('panel');
+  el.classList.remove('hide');
+  const ph=PH[d.phase];
+  document.getElementById('pp').textContent=ph.label;
+  document.getElementById('pp').style.color=ph.color;
+  document.getElementById('pn').textContent=d.label;
+  document.getElementById('pc').textContent=d.cat;
+  document.getElementById('ps').textContent=d.std;
+  document.getElementById('pd').textContent=d.desc;
+  document.getElementById('pt').innerHTML=d.tags.map(t=>`<span class="p-tag">${t}</span>`).join('');
+  let h='';
+  links.filter(l=>l.t===d.id).forEach(l=>{const src=byId[l.s];h+=`<div class="p-ci"><span class="p-ca">→</span><span class="p-cn">${src.label}</span><span style="color:var(--dim);font-size:9px;margin-left:auto;font-family:JetBrains Mono,monospace">${l.k}</span></div>`;});
+  links.filter(l=>l.s===d.id).forEach(l=>{const tgt=byId[l.t];h+=`<div class="p-ci"><span class="p-ca">←</span><span class="p-cn">${tgt.label}</span><span style="color:var(--dim);font-size:9px;margin-left:auto;font-family:JetBrains Mono,monospace">${l.k}</span></div>`;});
+  document.getElementById('pcon').innerHTML=h||'<div style="color:var(--dim);font-size:10.5px">No connections</div>';
 }
+svg.on('click',()=>clearSel());
 
-svg.on('click', () => clearSel());
 
-// ── Particle flow ─────────────────────────────────────────────────────────────
-function spawnParticle() {
-  if (!flowActive) return;
-  const lnk = links[Math.floor(Math.random() * links.length)];
-  const pi  = links.indexOf(lnk);
-  const pe  = document.getElementById(`lp-${pi}`);
-  if (!pe) return;
-  const len = pe.getTotalLength();
-  if (!len) return;
-  const p = partGroup.append('circle')
-    .attr('r', 2.5)
-    .attr('fill', LINK_STYLES[lnk.type].color)
-    .attr('opacity', 0.9);
-  const dur = 900 + Math.random() * 700;
+
+// ── Particle flow ─────────────────────────────────────────────────────
+function spawnP(){
+  if(!flowOn) return;
+  const lnk=links[Math.floor(Math.random()*links.length)];
+  const pi=links.indexOf(lnk);
+  const pe=document.getElementById(`lp${pi}`);
+  if(!pe) return;
+  const len=pe.getTotalLength(); if(!len) return;
+  const p=partG.append('circle').attr('r',2.2).attr('fill',LS[lnk.k].c).attr('opacity',0.85);
+  const dur=920+Math.random()*680;
   p.transition().duration(dur).ease(d3.easeLinear)
-    .attrTween('transform', () => t => {
-      const pt = pe.getPointAtLength(t * len);
-      return `translate(${pt.x},${pt.y})`;
-    })
-    .attr('opacity', 0).remove();
+    .attrTween('transform',()=>t=>{const pt=pe.getPointAtLength(t*len);return `translate(${pt.x},${pt.y})`;})
+    .attr('opacity',0).remove();
 }
-
-function startFlow() { if (flowId) return; flowId = setInterval(spawnParticle, 165); }
-function stopFlow()  { clearInterval(flowId); flowId = null; partGroup.selectAll('circle').remove(); }
+function startFlow(){if(flowTick)return;flowTick=setInterval(spawnP,170);}
+function stopFlow(){clearInterval(flowTick);flowTick=null;partG.selectAll('circle').remove();}
 startFlow();
 
-// ── Phase filter pills ────────────────────────────────────────────────────────
-document.querySelectorAll('.phase-pill').forEach(pill => {
-  pill.addEventListener('click', () => {
-    document.querySelectorAll('.phase-pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    const f = pill.dataset.phase;
-    nodeEls.attr('opacity', n => f==='all' || n.phase===f ? 1 : 0.08);
-    linkSel.attr('opacity', l => f==='all' || nodeById[l.source].phase===f || nodeById[l.target].phase===f ? 0.4 : 0.03);
+// ── Phase filter pills ────────────────────────────────────────────────
+document.querySelectorAll('.pill').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+    el.classList.add('on');
+    const f=el.dataset.p;
+    nodeEls.attr('opacity',n=>f==='all'||n.phase===f?1:0.07);
+    linkSel.attr('opacity',l=>f==='all'||byId[l.s].phase===f||byId[l.t].phase===f?0.38:0.03);
   });
 });
 
-// ── Legend click filter ───────────────────────────────────────────────────────
-document.querySelectorAll('.leg-item').forEach(item => {
-  item.addEventListener('click', () => {
-    item.classList.toggle('active');
-    const activePh = new Set([...document.querySelectorAll('.leg-item.active')].map(i => i.dataset.phase));
-    nodeEls.attr('opacity', n => activePh.has(n.phase) ? 1 : 0.08);
-    linkSel.attr('opacity', l => activePh.has(nodeById[l.source].phase) || activePh.has(nodeById[l.target].phase) ? 0.4 : 0.03);
+// ── Legend toggle ─────────────────────────────────────────────────────
+document.querySelectorAll('.leg').forEach(el=>{
+  el.addEventListener('click',()=>{
+    el.classList.toggle('on');
+    const active=new Set([...document.querySelectorAll('.leg.on')].map(i=>i.dataset.phase));
+    nodeEls.attr('opacity',n=>active.has(n.phase)?1:0.07);
+    linkSel.attr('opacity',l=>active.has(byId[l.s].phase)||active.has(byId[l.t].phase)?0.38:0.03);
   });
 });
 
-// ── Search ─────────────────────────────────────────────────────────────────────
-document.getElementById('search-input').addEventListener('input', function() {
-  const q = this.value.toLowerCase().trim();
-  if (!q) { nodeEls.classed('dimmed', false); return; }
-  nodeEls.classed('dimmed', d =>
-    ![d.label, d.sublabel, d.category, ...d.tags, d.std]
-      .join(' ').toLowerCase().includes(q)
-  );
+// ── Search ────────────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input',function(){
+  const q=this.value.toLowerCase().trim();
+  if(!q){nodeEls.classed('dim',false);return;}
+  nodeEls.classed('dim',d=>![d.label,d.sub,d.cat,...d.tags,d.std].join(' ').toLowerCase().includes(q));
 });
 
-// ── Control buttons ───────────────────────────────────────────────────────────
-const btnFlow = document.getElementById('btn-flow');
-btnFlow.addEventListener('click', function() {
-  flowActive = !flowActive;
-  this.classList.toggle('active', flowActive);
-  flowActive ? startFlow() : stopFlow();
+// ── Buttons ───────────────────────────────────────────────────────────
+const bf=document.getElementById('bflow');
+bf.addEventListener('click',function(){
+  flowOn=!flowOn;this.classList.toggle('on',flowOn);
+  flowOn?startFlow():stopFlow();
 });
 
-const btnLbl = document.getElementById('btn-labels');
-btnLbl.addEventListener('click', function() {
-  showLabels = !showLabels;
-  this.classList.toggle('active', showLabels);
-  nodeGroup.selectAll('.node-fo').attr('display', showLabels ? 'block' : 'none');
+const bl=document.getElementById('blbl');
+bl.addEventListener('click',function(){
+  showLbl=!showLbl;this.classList.toggle('on',showLbl);
+  nodeG.selectAll('.lbl-fo').attr('display',showLbl?'block':'none');
 });
 
-document.getElementById('btn-reset').addEventListener('click', () => {
-  clearSel();
-  fitView();
-  document.getElementById('search-input').value = '';
-  nodeEls.classed('dimmed', false).attr('opacity', null);
-  linkSel.classed('dimmed highlighted', false).attr('opacity', null);
-  document.querySelectorAll('.phase-pill').forEach(p => p.classList.remove('active'));
-  document.querySelector('.phase-pill[data-phase="all"]').classList.add('active');
-  document.querySelectorAll('.leg-item').forEach(i => i.classList.add('active'));
+document.getElementById('brst').addEventListener('click',()=>{
+  clearSel(); fitView();
+  document.getElementById('search').value='';
+  nodeEls.classed('dim',false).attr('opacity',null);
+  linkSel.classed('dim hi',false).attr('opacity',null);
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+  document.querySelector('.pill[data-p="all"]').classList.add('on');
+  document.querySelectorAll('.leg').forEach(i=>i.classList.add('on'));
 });
 
-// ── Zoom buttons ──────────────────────────────────────────────────────────────
-document.getElementById('zoom-in').addEventListener('click',  () => svg.transition().duration(280).call(zoom.scaleBy, 1.4));
-document.getElementById('zoom-out').addEventListener('click', () => svg.transition().duration(280).call(zoom.scaleBy, 0.72));
-document.getElementById('zoom-fit').addEventListener('click', () => fitView());
+// ── Zoom buttons ──────────────────────────────────────────────────────
+document.getElementById('zi').addEventListener('click',()=>svg.transition().duration(260).call(zoom.scaleBy,1.4));
+document.getElementById('zo').addEventListener('click',()=>svg.transition().duration(260).call(zoom.scaleBy,0.72));
+document.getElementById('zf').addEventListener('click',()=>fitView());
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
-document.getElementById('stat-nodes').textContent = nodes.length;
-document.getElementById('stat-edges').textContent = links.length;
+// ── Stats ─────────────────────────────────────────────────────────────
+document.getElementById('sn').textContent=nodes.length;
+document.getElementById('se').textContent=links.length;
 
-// ── Keyboard shortcuts ────────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key==='Escape') clearSel();
-  if (e.key==='+'||e.key==='=') svg.transition().duration(200).call(zoom.scaleBy, 1.3);
-  if (e.key==='-')               svg.transition().duration(200).call(zoom.scaleBy, 0.77);
-  if (e.key==='0'||e.key==='f')  fitView();
+// ── Keyboard ──────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') clearSel();
+  if(e.key==='+'||e.key==='=') svg.transition().duration(200).call(zoom.scaleBy,1.3);
+  if(e.key==='-')               svg.transition().duration(200).call(zoom.scaleBy,0.77);
+  if(e.key==='0'||e.key==='f')  fitView();
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
-setTimeout(fitView, 250);
+// ── Boot ──────────────────────────────────────────────────────────────
+setTimeout(fitView,220);
 </script>
 </body>
 </html>
