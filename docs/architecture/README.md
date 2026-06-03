@@ -126,7 +126,76 @@ The Lapaki architecture documentation suite consists of four files, each providi
 
 ---
 
+### File 5: [05-governance-timeline.md](./05-governance-timeline.md)
+
+**Title:** Governance Framework & Timeline Simulation
+
+**Diagram Count:** 1 Mermaid diagram (Gantt Chart timeline)
+
+**Diagram Types:**
+- Gantt implementation timeline (`gantt`)
+
+**Intended Audience:** Executive sponsors, compliance officers, research managers, project managers
+
+**Primary Use Case:** Tracking the simulated project milestones and governance implementation tasks across all four tiers of the architecture from May 14, 2026, to July 30, 2026. This schedule enforces regulatory verification gates before technical implementation begins.
+
+**Key Content:**
+- Multi-tier data architecture alignment
+- DUA, BAA, and IAM role policy drafting
+- De-identification validation protocols
+- Federated query network constraints
+- CISO security review and sign-off criteria
+
+**Regulatory Sensitivity:** LOW — contains project management planning milestones and generic governance frameworks.
+
+---
+
+### File 6: [06-detailed-gantt.md](./06-detailed-gantt.md)
+
+**Title:** Detailed Planning & Governance Gantt Chart
+
+**Diagram Count:** 1 Mermaid diagram (Detailed Gantt Chart)
+
+**Diagram Types:**
+- Gantt planning timeline (`gantt`)
+
+**Intended Audience:** Project managers, team leads, IT coordinators, executive sponsors
+
+**Primary Use Case:** Tracking progress of individual governance tasks, work packages, and dependency relations across the 11-week planning cycle (May 14, 2026 – July 30, 2026).
+
+**Key Content:**
+- Phase 1-5 task breakdowns
+- Outbound firewall, container scan, and DP epsilon subtasks
+- Sequence-based milestone dependencies
+
+**Regulatory Sensitivity:** LOW — project planning scheduling data only.
+
+---
+
+### File 7: [07-gantt-critique.md](./07-gantt-critique.md)
+
+**Title:** Gantt Chart Project Management Critique
+
+**Diagram Count:** 1 Mermaid diagram (Corrected Gantt Chart)
+
+**Diagram Types:**
+- Gantt corrected planning timeline (`gantt`)
+
+**Intended Audience:** Project managers, CISO, Data Governance Committee, Executive leadership
+
+**Primary Use Case:** Analyzing the critical sequence errors, bottlenecks, and dependencies in the baseline project timeline and recommending a parallelized multi-track execution strategy.
+
+**Key Content:**
+- Grading of timeline dimensions (1-10 scale)
+- Legal, data-mapping, and security boundary bottlenecks
+- Corrected parallel-track project plan
+
+**Regulatory Sensitivity:** LOW — internal project management feedback.
+
+---
+
 ## How to Read Mermaid Diagrams
+
 
 Mermaid is an open-source, text-based diagramming language that renders diagrams natively in many modern documentation platforms. All diagrams in this architecture suite are written in Mermaid syntax. No specialized drawing tools are required.
 
@@ -267,15 +336,15 @@ The following table maps each major pipeline phase and architectural component t
 | **Information Security Officer** | [02-flowcharts.md](./02-flowcharts.md) — Incident response workflow | [04-mindmap-notes.md](./04-mindmap-notes.md) — ADR-002 (cloud BAA), ADR-003 (de-ID) |
 | **Research Program Director / PI** | [03-mindmap.md](./03-mindmap.md) — Research use case taxonomy | [01-swimlanes.md](./01-swimlanes.md) — Researcher access provisioning |
 | **IRB Staff** | [01-swimlanes.md](./01-swimlanes.md) — IRB authorization swimlane | [02-flowcharts.md](./02-flowcharts.md) — Access provisioning flow |
-| **Executive / Governance** | [03-mindmap.md](./03-mindmap.md) — Governance mind map | [01-swimlanes.md](./01-swimlanes.md) — End-to-end overview |
+| **Executive / Governance** | [03-mindmap.md](./03-mindmap.md) — Governance mind map | [01-swimlanes.md](./01-swimlanes.md) — End-to-end overview; [05-governance-timeline.md](./05-governance-timeline.md) — Timeline; [06-detailed-gantt.md](./06-detailed-gantt.md) — Gantt; [07-gantt-critique.md](./07-gantt-critique.md) — Critique |
 | **External Auditor / Assessor** | [01-swimlanes.md](./01-swimlanes.md) — PHI data flow | [02-flowcharts.md](./02-flowcharts.md) — All control flows |
 
 ### By COBIT Governance Domain
 
 | COBIT Domain | Architecture File(s) Most Relevant |
 |---|---|
-| APO (Align, Plan & Organize) | [03-mindmap.md](./03-mindmap.md) — Governance structure; [04-mindmap-notes.md](./04-mindmap-notes.md) — ADRs |
-| BAI (Build, Acquire & Implement) | [02-flowcharts.md](./02-flowcharts.md) — ETL and change flows; [04-mindmap-notes.md](./04-mindmap-notes.md) — ADRs |
+| APO (Align, Plan & Organize) | [03-mindmap.md](./03-mindmap.md) — Governance structure; [04-mindmap-notes.md](./04-mindmap-notes.md) — ADRs; [05-governance-timeline.md](./05-governance-timeline.md) — Timeline; [06-detailed-gantt.md](./06-detailed-gantt.md) — Gantt; [07-gantt-critique.md](./07-gantt-critique.md) — Critique |
+| BAI (Build, Acquire & Implement) | [02-flowcharts.md](./02-flowcharts.md) — ETL and change flows; [04-mindmap-notes.md](./04-mindmap-notes.md) — ADRs; [05-governance-timeline.md](./05-governance-timeline.md) — Timeline; [06-detailed-gantt.md](./06-detailed-gantt.md) — Gantt; [07-gantt-critique.md](./07-gantt-critique.md) — Critique |
 | DSS (Deliver, Service & Support) | [01-swimlanes.md](./01-swimlanes.md) — Operations swimlane; [02-flowcharts.md](./02-flowcharts.md) — Incident response |
 | MEA (Monitor, Evaluate & Assess) | [02-flowcharts.md](./02-flowcharts.md) — Monitoring flows; [01-swimlanes.md](./01-swimlanes.md) — Audit trail points |
 
@@ -287,6 +356,9 @@ The following table maps each major pipeline phase and architectural component t
 | `02-flowcharts.md` | [Open →](./02-flowcharts.md) | Detailed operational flowcharts for ETL, de-ID, access, incident response |
 | `03-mindmap.md` | [Open →](./03-mindmap.md) | Conceptual mind maps for CDM domains and governance |
 | `04-mindmap-notes.md` | [Open →](./04-mindmap-notes.md) | Architecture Decision Records and technical notes |
+| `05-governance-timeline.md` | [Open →](./05-governance-timeline.md) | Governance framework timeline and 11-week simulation project plan |
+| `06-detailed-gantt.md` | [Open →](./06-detailed-gantt.md) | Detailed planning Gantt chart in Mermaid format |
+| `07-gantt-critique.md` | [Open →](./07-gantt-critique.md) | Gantt chart project management critique and corrected plan |
 
 ---
 
