@@ -86,11 +86,18 @@ gantt
 
 ### Phase 3: Research Standardization & Privacy Auditing (Weeks 6-8)
 * **t3_1: ETL Mapping Specs (Pilot)** (June 19 - June 26)
-  - Document field-level source-to-target mapping between the Enterprise Data Warehouse (Tier 2) and the Common Data Model (Tier 3).
+  - Document field-level source-to-target mapping between the Enterprise Data Warehouse (Tier 2) and the Common Data Model (Tier 3, OMOP CDM v5.4).
+  - Implement LOINC vocabulary mapping for laboratory tests, utilizing TF-IDF text similarity scoring to rank candidates and value distribution ranges to assist reviews.
+  - Implement RxNorm/NDC mapping for medications, using search indexing (Lucene-based similarity) to resolve missing codes for manual physician sign-off.
+  - Infer missing drug end dates using `start_date` + `days_supply`.
+  - Apply standard OHDSI fallback rule for missing condition/diagnosis end dates: `end_date = start_date + 30 days`.
+  - Deduplicate conflicting demographic profiles by selecting the most current record based on creation timestamp.
+  - Filter encounters in `visit_occurrence` to exclude phone calls, administrative scheduling, and billing anomalies.
 * **t3_2: De-Identification Method Selection** (June 24 - June 30)
   - Formally choose between HIPAA Safe Harbor (structural stripping) and Expert Determination (statistical analysis of risk).
 * **t3_3: Formulate DQD Threshold Rules** (July 1 - July 7)
-  - Define minimum data-quality validation scores for clinical tables (e.g., condition, drug, measurement).
+  - Define minimum data-quality validation scores for clinical tables using OHDSI Achilles.
+  - Formulate automated checks for data density, demographic consistency (flagging birthdates > 100 years), and concept mapping coverage (>95% coverage on top 500 lab tests).
 
 ---
 
@@ -99,8 +106,11 @@ gantt
   - Define strict routing rules for local federated learning clients to connect to the external central aggregator.
 * **t4_2: Container Security Audit Guide** (July 13 - July 17)
   - Establish a standard procedure for vulnerability-scanning external software container images prior to deployment.
+  - Audit Federated Learning (FL) containers to verify model computations run solely against the standardized Tier 3 OMOP CDM view.
+  - Lock container network namespaces to prevent raw patient clinical rows from leaving local node boundaries.
 * **t4_3: Differential Privacy Epsilon Budget Protocol** (July 16 - July 21)
   - Define the maximum privacy loss parameter ($\epsilon$) permitted per study execution to mitigate model inversion risks.
+  - Formulate gradient/weight noise-addition algorithms applied locally at each edge node before sending updates to the central aggregator.
 
 ---
 
